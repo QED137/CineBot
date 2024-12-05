@@ -1,7 +1,8 @@
 # Graph-Powered Retrieval-Augmented Generation (RAG) for Smarter Recommendations
 
-🚀 Description: This project demonstrates the integration of Retrieval-Augmented Generation (RAG) with graph databases (Neo4j) and Large Language
-Models (LLMs) to create an intelligent and scalable recommendation system. By leveraging the structured nature of graph databases and the dynamic
+🚀 Description: This project demonstrates the integration of Retrieval-Augmented Generation (RAG) with 
+graph databases (Neo4j) and Large Language Models (LLMs) to create an intelligent and scalable recommendation
+system. By leveraging the structured nature of graph databases and the dynamic
 capabilities of LLMs, the system delivers contextually relevant and accurate recommendations for movies.
 
 # Key Features 
@@ -28,5 +29,21 @@ capabilities of LLMs, the system delivers contextually relevant and accurate rec
   1. Clone the repository:
 
      ```
-        git clone https://github.com/your-username/your-repo-name.git
-        cd your-repo-name
+        git clone https://github.com/QED137/cineBoat.git
+        cd cineBoat
+ 2. Install Dependencies
+
+    ```
+     pip install -r requirements.txt
+3. Set up your Neo4j database and .env file with credentials.
+4.  Run app:
+
+   ```
+    streamlit run app.py
+```
+# Use cases :
+ * Personalized Movie Recommendations: Find movies similar to your favorites.
+ * Knowledge Retrieval: Ask movie-related questions like "Who directed Inception?" or "What movies came out after 2010?"
+ * Interactive Learning: Understand the power of combining RAG with graph-based systems.
+## License
+  MIT
