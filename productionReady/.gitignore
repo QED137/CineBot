@@ -1,1 +1,30 @@
+# Environment variables
 .env
+
+# Python cache
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Virtual environment
+venv/
+*/venv/
+.venv/
+
+# Data files (optional, if large or sensitive)
+# data/raw/
+# data/processed/
+
+# Model cache (optional)
+models_cache/
+
+# IDE/Editor specific
+.vscode/
+.idea/
+
+# OS specific
+.DS_Store
+Thumbs.db
+
+#streamlit
+.streamlit
