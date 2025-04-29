@@ -1,0 +1,24 @@
+# docker-compose.yml
+version: '3.8'
+services:
+  neo4j:
+    # Use the Enterprise image for full features (Vector search etc.)
+    image: neo4j:5-enterprise
+    container_name: neo4j_dev_codespace
+    ports:
+      # Maps port inside container (right) to port on Codespace (left)
+      - "7474:7474" # Browser
+      - "7687:7687" # Bolt Driver
+    volumes:
+      # Persists data in a named volume within the Codespace environment
+      - neo4j_data:/data
+    environment:
+      # Sets user to 'neo4j' and reads password from the Codespace Secret
+      - NEO4J_AUTH=neo4j/${NEO4J_DOCKER_PASSWORD:-YouForgotTheSecret!}
+      # MUST accept license for Enterprise Edition
+      - NEO4J_ACCEPT_LICENSE_AGREEMENT=yes
+    restart: unless-stopped
+
+volumes:
+  # Defines the volume used above, data persists across container restarts
+  neo4j_data:
