@@ -115,6 +115,7 @@ venv.bak/
 
 # Streamlit secrets
 .streamlit/secrets.toml
+.streamlit
 
 # Docker compose specific files
 # Depending on your setup, you might want to ignore these
