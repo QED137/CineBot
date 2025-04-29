@@ -1,0 +1,27 @@
+{
+    "name": "Python 3 with Docker",
+    "image": "mcr.microsoft.com/devcontainers/python:1-3.11-bullseye", // Or your chosen Python base
+    "features": {
+      // Ensure this feature is present
+      "ghcr.io/devcontainers/features/docker-in-docker:2": {},
+      // Keep Node.js if you added it
+      "ghcr.io/devcontainers/features/node:1": { "version": "lts" }
+    },
+    // Ensure Neo4j ports (7474, 7687) are forwarded
+    "forwardPorts": [
+        7474, // Neo4j Browser HTTP
+        7687, // Neo4j Bolt driver connection
+        8501  // Add Streamlit's default port for later
+      ],
+    // Optional but recommended: Install Python packages automatically
+    "postCreateCommand": "pip install --upgrade pip && pip install -r requirements.txt", // Make sure requirements.txt exists
+    "customizations": {
+      "vscode": {
+        "extensions": [
+          "ms-python.python",
+          "ms-python.vscode-pylance"
+          // Add other extensions you like
+        ]
+      }
+    }
+  }
