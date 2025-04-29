@@ -1,0 +1,39 @@
+# requirements.txt
+
+# === Core Data Handling ===
+pandas         # Data manipulation and reading CSVs
+numpy          # Numerical operations (often a dependency of pandas)
+
+# === Neo4j Database Interaction ===
+neo4j          # Official Neo4j Python driver
+
+# === Langchain Core & Integrations ===
+langchain             # Core Langchain framework
+langchain-community   # Community integrations (includes Neo4jGraph, vector stores)
+langchain-openai      # OpenAI specific integrations (ChatOpenAI, OpenAIEmbeddings)
+langchain-core        # Core abstractions (often installed automatically, but good to list)
+openai                # Direct OpenAI client library (needed by langchain-openai)
+
+# === Embeddings & NLP ===
+sentence-transformers # For generating sentence/text embeddings (e.g., all-MiniLM-L6-v2)
+transformers[sentencepiece] # Underlying library for many NLP models, sentencepiece often needed
+keybert               # For keyword extraction
+
+# === Web Application & UI ===
+streamlit             # The web application framework
+streamlit-chat        # Component for creating chat interfaces (optional but used before)
+
+# === External APIs & Utilities ===
+requests              # For making HTTP requests (e.g., to TMDB/OMDB)
+python-dotenv         # For loading .env files (useful for local dev, less critical in Codespace w/ secrets)
+fuzzywuzzy            # For fuzzy string matching (e.g., movie titles)
+python-Levenshtein    # Speeds up fuzzywuzzy calculations (recommended)
+
+# === Data Source Interaction ===
+kaggle                # Official Kaggle API client (for downloading datasets via CLI)
+# Alternatively, if you prefer the newer library:
+# kagglehub
+
+# === Optional (Add if explicitly needed later) ===
+# faiss-cpu           # For FAISS vector search (if not using Neo4j vector index)
+# langchain-huggingface # If using HuggingFace Hub models/endpoints directly via Langchain
