@@ -15,8 +15,8 @@ logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(
 log = logging.getLogger(__name__)
 
 # --- Constants ---
-# Adjust batch size based on AuraDB Free tier limits and performance
-# Start smaller (e.g., 100-250) and increase if stable
+
+# smaller sizes
 global MAX_TMDB_PAGES, NEO4J_BATCH_SIZE
 MAX_TMDB_PAGES = args.max_pages
 NEO4J_BATCH_SIZE = args.batch_size
@@ -24,7 +24,7 @@ NEO4J_BATCH_SIZE = 100
 TMDB_API_KEY = settings.TMDB_API_KEY
 TMDB_BASE_URL = "https://api.themoviedb.org/3"
 # Number of TMDb pages to fetch (each page has 20 movies typically)
-# Adjust based on how many movies you want (e.g., 50 pages * 20 movies/page = 1000 movies)
+# Number of movies (e.g., 50 pages * 20 movies/page = 1000 movies)
 MAX_TMDB_PAGES = 50
 # Delay between API calls to respect TMDb rate limits
 API_DELAY_SECONDS = 0.3
@@ -173,11 +173,11 @@ def get_popular_movies(max_pages: int) -> List[Dict[str, Any]]:
     return list(set(movie_ids)) # Return unique IDs
 
 
-# --- Utility Functions (Same as before) ---
+# --- Utility Functions ---
 def get_embedding_dimension(model_name: str) -> int:
     """Gets the dimension of the configured embedding model."""
     try:
-        model = get_embedding_model() # Relies on generator loading model based on settings
+        model = get_embedding_model() 
         return model.get_sentence_embedding_dimension()
     except Exception as e:
         log.error(f"Could not determine embedding dimension for model {model_name}: {e}")
@@ -190,7 +190,7 @@ def run_cypher_queries(driver: Driver, queries: List[str]):
     try:
         # Use bookmarks for index creation consistency if running in a cluster (Aura is clustered)
         last_bookmark = None
-        with driver.session(database="neo4j") as session: # Aura uses 'neo4j' database by default
+        with driver.session(database="neo4j") as session: # 'neo4j' database by default (free version)
             for query in queries:
                 try:
                     log.info(f"Executing: {query[:100]}...") # Log start of query

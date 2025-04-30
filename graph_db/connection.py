@@ -45,7 +45,7 @@ def close_driver():
 def main():
     try:
         driver = get_driver()
-        with driver.session(database="neo4j") as session: # Specify database if not default
+        with driver.session(database="neo4j") as session: 
             result = session.run("MATCH (n) RETURN count(n) AS node_count")
             record = result.single()
             print(f"Connected to Neo4j, found {record['node_count']} nodes.")

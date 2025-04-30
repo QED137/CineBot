@@ -14,10 +14,10 @@ TMDB_API_KEY = os.getenv("TMDB_API_KEY")
 OMDB_API_KEY = os.getenv("OMDB_API_KEY")
 
 if __name__ == "main":
-     # --- Basic Validation (Optional but good practice) ---
+     # --- Basic Validation  ---
      if not all([NEO4J_URI, NEO4J_USERNAME, NEO4J_PASSWORD, TMDB_API_KEY]):
           print("Warning: Essential Neo4j or TMDB secrets seem to be missing!")
-     # You could raise an error here if they are absolutely required
+     # raise an error here if they are absolutely required
      # raise ValueError("Missing critical configuration secrets!")
      print(NEO4J_USERNAME)   
 
