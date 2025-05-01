@@ -27,7 +27,7 @@
 
 # config/settings.py
 import os
-from dotenv import load_dotenv # You can keep this for local development
+#from dotenv import load_dotenv # You can keep this for local development
 
 # This line loads variables from a .env file *if it exists*.
 # In Codespaces (where you haven't created a .env file), it likely does nothing.
@@ -53,3 +53,4 @@ TMDB_API_KEY = os.getenv("TMDB_API_KEY")
 if not NEO4J_URI or not NEO4J_PASSWORD:
     print("Warning: Neo4j URI or Password not found in environment.")
 # ... etc ...
+print("Configuration loaded successfully.")
