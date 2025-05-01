@@ -3,6 +3,7 @@
 # === Core Data Handling ===
 pandas         # Data manipulation and reading CSVs
 numpy          # Numerical operations (often a dependency of pandas)
+thefuzz[speedup]
 
 # === Neo4j Database Interaction ===
 neo4j          # Official Neo4j Python driver

@@ -2,7 +2,7 @@ import logging
 import pandas as pd
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.metrics.pairwise import cosine_similarity
-from typing import List, Dict, Tuple, Optional
+from typing import List, Dict, Tuple, Optional, Any
 from neo4j import Driver
 from graph_db.query_builder import execute_query
 
@@ -99,7 +99,7 @@ def get_embedding_similarity(target_embedding: List[float], embeddings: List[Lis
         log.error(f"Error calculating embedding similarity: {e}")
         return None
 
-def get_top_n_similar(results: List[Tuple[str, float]], target_title: str, n: int = 5) -> List[Dict[str, Any]]:
+def get_top_n_similar(results: List[Tuple[str, float]], target_title: str, n: int = 5):
     """Sorts similarity results and returns top N, excluding the target movie."""
     if not results:
         return []

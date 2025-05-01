@@ -1,7 +1,7 @@
 from langchain_core.prompts import PromptTemplate
 
 # Template for answering questions using retrieved context
-RAG_PROMPT_TEMPLATE = """
+MULTIMODAL_PROMPT = """
 You are an AI assistant specialized in movies, helping users find information and recommendations.
 Use the following retrieved context from a movie graph database to answer the user's question.
 If the context doesn't contain the answer, state that you don't have enough information from the database but try to answer based on your general knowledge if appropriate, clearly indicating the source of your information.
@@ -17,7 +17,7 @@ ANSWER:
 """
 
 rag_prompt = PromptTemplate(
-    template=RAG_PROMPT_TEMPLATE,
+    template=MULTIMODAL_PROMPT,
     input_variables=["context", "question"]
 )
 
