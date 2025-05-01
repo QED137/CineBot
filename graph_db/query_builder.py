@@ -1,6 +1,7 @@
 from neo4j import Driver, Session, Transaction
 from typing import List, Dict, Any, Optional
 import logging
+from graph_db.connection import get_driver, close_driver
 
 log = logging.getLogger(__name__)
 
@@ -102,9 +103,37 @@ def execute_query(driver: Driver, query_func, **kwargs) -> Any:
         # Depending on the use case, you might want to return None, an empty list, or re-raise
         return None # Or return [] / raise e
 
+# --- Function to find movie by IMAGE embedding ---
+def find_movie_by_image_embedding(tx: Transaction, embedding: List[float], top_k: int = 1) -> List[Dict[str, Any]]:
+    """Finds movies based on image embedding similarity using a vector index."""
+    # Assumes a vector index named 'moviePosterIndex' exists on Movie.posterEmbedding
+    # Adjust index name and property key as needed
+    cypher = """
+    CALL db.index.vector.queryNodes('moviePosterIndex', $top_k, $embedding)
+    YIELD node AS matchedMovie, score
+    RETURN matchedMovie.title AS title,
+           matchedMovie.tmdbId AS tmdbId, // Return tmdbId for potential lookups
+           score
+    ORDER BY score DESC
+    """
+    result = tx.run(cypher, embedding=embedding, top_k=top_k)
+    return [record.data() for record in result]
+
+# --- Optional: Function to get movie details by tmdbId ---
+def get_movie_by_tmdbid(tx: Transaction, tmdb_id: int) -> Optional[Dict[str, Any]]:
+    """Fetches minimal details for a movie by its TMDb ID."""
+    cypher = """
+    MATCH (m:Movie {tmdbId: $tmdb_id})
+    RETURN m.title AS title, m.released AS released
+    LIMIT 1
+    """
+    result = tx.run(cypher, tmdb_id=tmdb_id)
+    record = result.single()
+    return record.data() if record else None
+
 # Example usage (can be tested independently)
 if __name__ == '__main__':
-    from graph_db.connection import get_driver, close_driver
+    
 
     driver = get_driver()
     try:
