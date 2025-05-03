@@ -2,7 +2,7 @@ from neo4j import Driver, Session, Transaction
 from typing import List, Dict, Any, Optional
 import logging
 from graph_db.connection import get_driver, close_driver
-
+from  config import settings
 log = logging.getLogger(__name__)
 
 # --- Basic Node/Relationship Retrieval ---
@@ -130,6 +130,16 @@ def get_movie_by_tmdbid(tx: Transaction, tmdb_id: int) -> Optional[Dict[str, Any
     result = tx.run(cypher, tmdb_id=tmdb_id)
     record = result.single()
     return record.data() if record else None
+def create_tagline_embeddings(movies):
+    cypher = """
+    CREATE VECTOR INDEX movie_tagline_embeddings IF NOT EXISTS
+    FOR (m:Movie) ON (m.taglineEmbedding) 
+    OPTIONS { indexConfig: {
+        `vector.dimensions`: 1536,
+        `vector.similarity_function`: 'cosine'
+        }}"""
+        
+    
 
 # Example usage (can be tested independently)
 if __name__ == '__main__':
@@ -138,7 +148,7 @@ if __name__ == '__main__':
     driver = get_driver()
     try:
         # Example: Get details for a movie
-        movie_title = "The Matrix"
+        movie_title = "The Replacements"
         details = execute_query(driver, get_movie_details, title=movie_title)
         if details:
             print(f"\nDetails for {movie_title}: {details}")
