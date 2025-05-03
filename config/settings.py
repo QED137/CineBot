@@ -41,13 +41,16 @@ import os
 NEO4J_URI = os.getenv("NEO4J_URI")
 NEO4J_USERNAME = os.getenv("NEO4J_USERNAME", "neo4j") # Default value is optional
 NEO4J_PASSWORD = os.getenv("NEO4J_PASSWORD")
-OPENAI_API_KEY = os.getenv("OPEN_API_KEY")
+OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
 OPENAI_VISION_MODEL_NAME = os.getenv("OPENAI_VISION_MODEL_NAME", "gpt-4-vision-preview")
 TEXT_EMBEDDING_MODEL_NAME = os.getenv("TEXT_EMBEDDING_MODEL_NAME", "all-MiniLM-L6-v2")
 VISION_EMBEDDING_MODEL_NAME = os.getenv("VISION_EMBEDDING_MODEL_NAME", "openai/clip-vit-base-patch32")
 TMDB_API_KEY = os.getenv("TMDB_API_KEY")
 TMDB_API_TOKEN=os.getenv("TMDB_API_TOKEN")
 OPENAI_BASE_URL=os.getenv("OPENAI_BASE_URL")
+OPENAI_ENDPOINT=os.getenv("OPENAI_ENDSPOINT")
+OMDB_API = os.getenv("OMDB_API") #for poster and data
+
 
 # --- End key part ---
 
