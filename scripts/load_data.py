@@ -265,15 +265,15 @@ def main(args):
                  poster_embedding = generate_image_embedding_from_url(movie_details.get('poster_path'))
 
                  # --- NEW: Generate Trailer Thumbnail Embedding ---
-                 trailer_thumb_embedding = [] # Default to empty list
-                 trailer_key = movie_details.get('trailerKey')
-                 if trailer_key:
-                     thumbnail_url = YT_THUMB_URL_PATTERN.format(key=trailer_key)
-                     log.debug(f"Attempting to generate embedding for trailer thumbnail: {thumbnail_url}")
-                     # Reuse the image embedding function
-                     trailer_thumb_embedding = generate_image_embedding_from_url(thumbnail_url) # Pass URL directly
-                     if not trailer_thumb_embedding:
-                          log.warning(f"Failed to generate thumbnail embedding for trailer key {trailer_key}")
+                #  trailer_thumb_embedding = [] # Default to empty list
+                #  trailer_key = movie_details.get('trailerKey')
+                #  if trailer_key:
+                #      thumbnail_url = YT_THUMB_URL_PATTERN.format(key=trailer_key)
+                #      log.debug(f"Attempting to generate embedding for trailer thumbnail: {thumbnail_url}")
+                #      # Reuse the image embedding function
+                #      trailer_thumb_embedding = generate_image_embedding_from_url(thumbnail_url) # Pass URL directly
+                #      if not trailer_thumb_embedding:
+                #           log.warning(f"Failed to generate thumbnail embedding for trailer key {trailer_key}")
                  # -----------------------------------------------
 
                  actors_data_for_cypher = []
@@ -293,14 +293,13 @@ def main(args):
                      "released": movie_details.get("released"),
                      "genres": movie_details.get("genres", []),
                      "poster_path": movie_details.get("poster_path"),
-                     "trailerKey": trailer_key, # Include trailer key
                      "vote_average": movie_details.get("vote_average"),
                      "vote_count": movie_details.get("vote_count"),
                      "directors": movie_details.get("directors", []),
                      "actors_data": actors_data_for_cypher,
                      "plotEmbedding": plot_embedding,
-                     "posterEmbedding": poster_embedding if poster_embedding else [],
-                     "trailerThumbnailEmbedding": trailer_thumb_embedding if trailer_thumb_embedding else [] # Add thumbnail embedding
+                     "posterEmbedding": poster_embedding if poster_embedding else []
+                     
                  }
                  final_batch_data.append(final_movie_data)
                  prep_count += 1
