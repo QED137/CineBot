@@ -1,6 +1,7 @@
 from config import settings
 from langchain_community.graphs import Neo4jGraph
 import requests
+from urllib.parse import quote
 # Load environment settings
 NEO4J_URI = settings.NEO4J_URI
 NEO4J_USERNAME = settings.NEO4J_USERNAME
@@ -11,15 +12,18 @@ OMDB_API=settings.OMDB_API
 OMDB_URL = f"http://www.omdbapi.com/?apikey={OMDB_API}&"
 
 # Initialize Neo4j LangChain connection
-kg = Neo4jGraph(
+def connect_neo():
+    kg = Neo4jGraph(
     url=NEO4J_URI,
     username=NEO4J_USERNAME,
     password=NEO4J_PASSWORD,
     database="neo4j"
-)
+    )
+    return kg
 
 # ✅ FIXED Cypher syntax for creating vector index
 def create_tagline_embeddings():
+    kg = connect_neo()
     kg.query(
     """
     CREATE VECTOR INDEX movie_tagline_embeddings IF NOT EXISTS
@@ -32,6 +36,7 @@ def create_tagline_embeddings():
     }
     """)
 def generate_embedding_tagline():
+    kg = connect_neo()
     OPENAI_API_KEY = settings.OPENAI_API_KEY
     OPENAI_ENDPOINT= settings.OPENAI_ENDPOINT
     kg.query("""
@@ -54,7 +59,7 @@ def generate_embedding_tagline():
 #generate_embedding_tagline()
 
 #test tagline embeedings 
-
+#kg=connect_neo()
 # result = kg.query(
 #     """
 #     MATCH (m:Movie) 
@@ -68,16 +73,33 @@ def generate_embedding_tagline():
 # print(result[0]['m.taglineEmbedding'][:10])
 
 
+def fetch_movie_from_omdb(title: str):
+    encoded_title = quote(title)
+    url = OMDB_URL + f"t={encoded_title}"
+    try:
+        response = requests.get(url)
+        response.raise_for_status()
+        data = response.json()
+        if data.get("Response") == "True":
+            return {
+                "title": data.get("Title"),
+                "year": data.get("Year"),
+                "plot": data.get("Plot"),
+                "poster": data.get("Poster"),
+            }
+        else:
+            print(f"❌ OMDb Error: {data.get('Error')}")
+            return None
+    except Exception as e:
+        print(f"🚨 Request failed: {e}")
+        return None
 
-def fetch_movie_from_omdb(title):
-    url = OMDB_URL + f"t={title}"
-    response = requests.get(url)
-    data = response.json()
-    return data
-
-# Example test
-movie_data = fetch_movie_from_omdb("Inception")
-print("🎬 Title:", movie_data.get("Title"))
-print("📅 Year:", movie_data.get("Year"))
-print("🧾 Plot:", movie_data.get("Plot"))
-print("🖼️ Poster:", movie_data.get("Poster"))
+# 🧪 Example usage
+movie = fetch_movie_from_omdb("Inception")
+if movie:
+    print("🎬 Title:", movie["title"])
+    print("📅 Year:", movie["year"])
+    print("🧾 Plot:", movie["plot"])
+    print("🖼️ Poster:", movie["poster"])
+else:
+    print("Movie not found or error occurred.")
