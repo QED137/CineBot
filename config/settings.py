@@ -46,6 +46,7 @@ OPENAI_VISION_MODEL_NAME = os.getenv("OPENAI_VISION_MODEL_NAME", "gpt-4-vision-p
 TEXT_EMBEDDING_MODEL_NAME = os.getenv("TEXT_EMBEDDING_MODEL_NAME", "all-MiniLM-L6-v2")
 VISION_EMBEDDING_MODEL_NAME = os.getenv("VISION_EMBEDDING_MODEL_NAME", "openai/clip-vit-base-patch32")
 TMDB_API_KEY = os.getenv("TMDB_API_KEY")
+TMDB_API_TOKEN=os.getenv("TMDB_API_TOKEN")
 
 # --- End key part ---
 
