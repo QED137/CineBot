@@ -58,4 +58,15 @@ OMDB_API = os.getenv("OMDB_API") #for poster and data
 if not NEO4J_URI or not NEO4J_PASSWORD:
     print("Warning: Neo4j URI or Password not found in environment.")
 # ... etc ...
-print("Configuration loaded successfully.")
+def main():
+    print("Configuration loaded successfully.")
+    from config import settings
+    print("✅ OMDB_API loaded:", settings.OMDB_API)
+    
+    print("✅ OMDB_API =", os.getenv("OMDB_API"))
+    print("✅ All ENV keys:", list(os.environ.keys()))
+
+
+if __name__ == "__main__":
+    main()
+    
