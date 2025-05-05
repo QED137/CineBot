@@ -1,76 +1,111 @@
 from config import settings
 from langchain_community.graphs import Neo4jGraph
 import requests
-from urllib.parse import quote
 from PIL import Image
-import requests
 from transformers import CLIPProcessor, CLIPModel
 import torch
-# Load environment settings
+from typing import Optional, List
+from urllib.parse import quote
+import logging
+
+# Configure logging
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
+
+# --- Initialize Config ---
 NEO4J_URI = settings.NEO4J_URI
 NEO4J_USERNAME = settings.NEO4J_USERNAME
 NEO4J_PASSWORD = settings.NEO4J_PASSWORD
 OPENAI_API_KEY = settings.OPENAI_API_KEY
-OPENAI_ENDPOINT= settings.OPENAI_ENDPOINT
+OPENAI_ENDPOINT = settings.OPENAI_ENDPOINT
 TMDB_API_KEY = settings.TMDB_API_KEY
+OMDB_API = settings.OMDB_API
 BASE_URL = "https://api.themoviedb.org/3"
-OMDB_API=settings.OMDB_API
 OMDB_URL = f"http://www.omdbapi.com/?apikey={OMDB_API}&"
+
+# --- Load CLIP Model (Global) ---
 clip_model = CLIPModel.from_pretrained("openai/clip-vit-base-patch32")
 clip_processor = CLIPProcessor.from_pretrained("openai/clip-vit-base-patch32")
 
-# Initialize Neo4j LangChain connection
-def connect_neo():
-    kg = Neo4jGraph(
-    url=NEO4J_URI,
-    username=NEO4J_USERNAME,
-    password=NEO4J_PASSWORD,
-    database="neo4j"
+# --- Neo4j Connection ---
+def connect_neo() -> Neo4jGraph:
+    return Neo4jGraph(
+        url=NEO4J_URI,
+        username=NEO4J_USERNAME,
+        password=NEO4J_PASSWORD,
+        database="neo4j"
     )
-    return kg
 
-# ✅ FIXED Cypher syntax for creating vector index
-def create_tagline_embeddings():
+# --- Ensure Movie Node ---
+def ensure_movie_node(title: str) -> bool:
     kg = connect_neo()
-    kg.query(
-    """
-    CREATE VECTOR INDEX movie_tagline_embeddings IF NOT EXISTS
-    FOR (m:Movie) ON (m.taglineEmbedding)
-    OPTIONS {
-        indexConfig: {
-            `vector.dimensions`: 1536,
-            `vector.similarity_function`: 'cosine'
-        }
-    }
-    """)
-def generate_embedding_tagline():
+    result = kg.query("MATCH (m:Movie {title: $title}) RETURN m", params={"title": title})
+    if result:
+        logger.info(f"✅ Movie '{title}' already exists.")
+        return True
+
+    try:
+        url = f"{OMDB_URL}t={quote(title)}"
+        response = requests.get(url)
+        data = response.json()
+
+        if data.get("Response") != "True":
+            logger.warning(f"❌ OMDb: Movie '{title}' not found: {data.get('Error')}")
+            return False
+
+        kg.query("""
+        MERGE (m:Movie {title: $title})
+        SET m.year = $year,
+            m.plot = $plot,
+            m.genre = $genre,
+            m.imdbID = $imdbID,
+            m.tagline = $tagline
+        """, params={
+            "title": data.get("Title"),
+            "year": data.get("Year"),
+            "plot": data.get("Plot"),
+            "genre": data.get("Genre"),
+            "imdbID": data.get("imdbID"),
+            "tagline": data.get("Tagline")
+        })
+
+        logger.info(f"✅ Created movie '{title}' in Neo4j.")
+        return True
+
+    except Exception as e:
+        logger.error(f"Error creating movie node for '{title}': {e}")
+        return False
+
+# --- Vector Index Management ---
+def create_vector_indexes() -> None:
     kg = connect_neo()
     kg.query("""
-    MATCH (movie:Movie) WHERE movie.tagline IS NOT NULL
-    WITH movie, genai.vector.encode(
-        movie.tagline, 
+    CREATE VECTOR INDEX movie_tagline_embeddings IF NOT EXISTS
+    FOR (m:Movie) ON (m.taglineEmbedding)
+    OPTIONS {indexConfig: {`vector.dimensions`: 1536, `vector.similarity_function`: 'cosine'}}
+    """)
+    kg.query("""
+    CREATE VECTOR INDEX movie_poster_embeddings IF NOT EXISTS
+    FOR (m:Movie) ON (m.posterEmbedding)
+    OPTIONS {indexConfig: {`vector.dimensions`: 512, `vector.similarity_function`: 'cosine'}}
+    """)
+    logger.info("✅ Vector indexes created/verified.")
+
+# --- Embedding Generation ---
+def generate_tagline_embeddings() -> None:
+    kg = connect_neo()
+    kg.query("""
+    MATCH (m:Movie) WHERE m.tagline IS NOT NULL AND m.taglineEmbedding IS NULL
+    WITH m, genai.vector.encode(
+        m.tagline, 
         "OpenAI", 
-        {
-          token: $openAiApiKey,
-          endpoint: $openAiEndpoint
-        }) AS vector
-    CALL db.create.setNodeVectorProperty(movie, "taglineEmbedding", vector)
-    """, 
-    params={"openAiApiKey":OPENAI_API_KEY, "openAiEndpoint": OPENAI_ENDPOINT} )
-    
-#imporitng movie data aand poster from omdbi
+        {token: $apiKey, endpoint: $endpoint}
+    ) AS embedding
+    SET m.taglineEmbedding = embedding
+    """, params={"apiKey": OPENAI_API_KEY, "endpoint": OPENAI_ENDPOINT})
+    logger.info("✅ Tagline embeddings generated.")
 
-def moviePoster(title):
-    url = f"http://www.omdbapi.com/?apikey={OMDB_API}&t={title}"
-    response=requests.get(url)
-    data = response.json()
-    return data.get('Poster')
-
-# Load model once (reuse for multiple calls)
-
-
-###generating poster embedding  so that it can store vector information
-def generate_image_embedding_from_url(image_url: str) -> list:
+def generate_image_embedding(image_url: str) -> Optional[List[float]]:
     try:
         response = requests.get(image_url, stream=True, timeout=10)
         response.raise_for_status()
@@ -79,105 +114,93 @@ def generate_image_embedding_from_url(image_url: str) -> list:
         inputs = clip_processor(images=image, return_tensors="pt")
         with torch.no_grad():
             embeddings = clip_model.get_image_features(**inputs)
-            embeddings = embeddings / embeddings.norm(p=2, dim=-1, keepdim=True)  # normalize
+            embeddings = embeddings / embeddings.norm(p=2, dim=-1, keepdim=True)
 
-        return embeddings[0].tolist()  # Return as list of floats (length 512)
+        return embeddings[0].tolist()
     except Exception as e:
-        print(f"❌ Failed to generate image embedding: {e}")
-        return []
+        logger.error(f"❌ Failed to generate image embedding: {e}")
+        return None
 
-def get_trailer_key(movie_id):
-    """Fetch the YouTube trailer key for a movie by its TMDb ID."""
-    url = f"{BASE_URL}/movie/{movie_id}/videos"
-    params = {"api_key": TMDB_API_KEY}
-    
-    response = requests.get(url, params=params)
-    response.raise_for_status()
-    
-    videos = response.json().get("results", [])
-    
-    # Prioritize official YouTube trailers
-    for video in videos:
-        if video.get("site") == "YouTube" and video.get("type") == "Trailer" and video.get("official"):
-            return video.get("key")
+# --- API Integrations ---
+def get_movie_poster(title: str) -> Optional[str]:
+    try:
+        url = f"{OMDB_URL}t={quote(title)}"
+        response = requests.get(url)
+        data = response.json()
+        return data.get('Poster')
+    except Exception as e:
+        logger.error(f"OMDb API error: {e}")
+        return None
 
-    # Fallback: any YouTube trailer
-    for video in videos:
-        if video.get("site") == "YouTube" and video.get("type") == "Trailer":
-            return video.get("key")
+def get_trailer_key(movie_id: int) -> Optional[str]:
+    try:
+        url = f"{BASE_URL}/movie/{movie_id}/videos"
+        params = {"api_key": TMDB_API_KEY}
+        response = requests.get(url, params=params)
+        response.raise_for_status()
 
-    # Final fallback: any YouTube video
-    for video in videos:
-        if video.get("site") == "YouTube":
-            return video.get("key")
+        videos = response.json().get("results", [])
+        for video in videos:
+            if video.get("site") == "YouTube" and video.get("type") == "Trailer" and video.get("official"):
+                return video.get("key")
+        return videos[0].get("key") if videos else None
+    except Exception as e:
+        logger.error(f"TMDb API error: {e}")
+        return None
 
-    return None  # No suitable trailer found
+# --- Update Neo4j ---
+def update_movie_with_poster(title: str) -> None:
+    if not ensure_movie_node(title):
+        logger.warning(f"⚠️ Movie '{title}' not found or failed to create. Skipping update.")
+        return
 
+    kg = connect_neo()
+    poster_url = get_movie_poster(title)
+    if not poster_url:
+        logger.warning(f"⚠️ No poster URL found for {title}")
+        return
 
-# ✅ List all vector indexes
-#result = kg.query("SHOW VECTOR INDEXES")
-#print(result)
+    embedding = generate_image_embedding(poster_url)
+    if not embedding:
+        logger.warning(f"⚠️ Failed to generate embedding for {title}'s poster.")
+        return
 
-#generate_embedding_tagline()
+    kg.query("""
+    MATCH (m:Movie {title: $title})
+    SET m.posterUrl = $url,
+        m.posterEmbedding = $embedding
+    """, params={"title": title, "url": poster_url, "embedding": embedding})
+    logger.info(f"✅ Poster and embedding updated for '{title}'.")
 
-# test tagline embeedings 
-# kg=connect_neo()
-# result = kg.query(
-#     """
-#     MATCH (m:Movie) 
-#     WHERE m.tagline IS NOT NULL
-#     RETURN m.tagline, m.taglineEmbedding
-#     LIMIT 1 
-#     """
-# )
+# --- Embedding Viewer ---
+def print_movie_embeddings(title: str):
+    kg = connect_neo()
+    result = kg.query("""
+        MATCH (m:Movie {title: $title})
+        RETURN m.title AS title, m.posterEmbedding AS posterVec, m.taglineEmbedding AS taglineVec
+    """, params={"title": title})
 
-# print(result[0]['m.tagline'])
-# print(result[0]['m.taglineEmbedding'][:10])
+    if not result:
+        logger.warning(f"⚠️ Movie '{title}' not found in Neo4j.")
+        return
 
+    movie = result[0]
+    print(f"🎬 Movie: {movie['title']}")
+    print(f"🖼️ Poster Embedding (first 10 dims): {movie['posterVec'][:10] if movie['posterVec'] else '❌ Not available'}")
+    print(f"💬 Tagline Embedding (first 10 dims): {movie['taglineVec'][:10] if movie['taglineVec'] else '❌ Not available'}")
 
-
-# import requests
-# from config import settings
-
-# OMDB_API_KEY = settings.OMDB_API
-# title = "Inception"
-
-# url = f"http://www.omdbapi.com/?apikey={OMDB_API}&t={title}"
-# response = requests.get(url)
-# data = response.json()
-
-# print("🔍 Raw OMDB response:", data)  # <-- Add this line
-
-# print("🎬 Title:", data.get("Title"))
-# print("📅 Year:", data.get("Year"))
-# print("🧾 Plot:", data.get("Plot"))
-# print("🖼️ Poster:", data.get("Poster"))
-# print("✅ OMDB_API loaded:", settings.OMDB_API)
-
-
-
-#Inception = moviePoster("Inception")
-#url = f"http://www.omdbapi.com/?apikey={OMDB_API}&t={Titanic}"
-#list1= generate_image_embedding_from_url(url)
-
-
-
-
-
-
+# --- Main Workflow ---
 def main():
-    poster= moviePoster("Titanic")
-    print(poster)
-    list1= generate_image_embedding_from_url(poster)
-    print(list1[:10])
-    movie_id = 27205  # Inception
-    trailer_key = get_trailer_key(movie_id)
-    if trailer_key:
-        print("YouTube Trailer URL:", f"https://www.youtube.com/watch?v={trailer_key}")
-    else:
-        print("No trailer found.")
-if __name__ == '__main__':
-    # --- Example usage ---
-    main()
+    create_vector_indexes()
+    generate_tagline_embeddings()
+    update_movie_with_poster("Titanic")
 
-            
+    trailer_key = get_trailer_key(27205)
+    if trailer_key:
+        print(f"🎬 Trailer: https://www.youtube.com/watch?v={trailer_key}")
+
+    print_movie_embeddings("Titanic")
+
+if __name__ == '__main__':
+    main()
+           
