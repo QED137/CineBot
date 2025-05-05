@@ -25,8 +25,8 @@ logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(
 log = logging.getLogger(__name__)
 
 # --- Constants ---
-DEFAULT_NEO4J_BATCH_SIZE = 50
-DEFAULT_MAX_TMDB_PAGES = 50
+DEFAULT_NEO4J_BATCH_SIZE = 1
+DEFAULT_MAX_TMDB_PAGES = 1
 API_DELAY_SECONDS = 0.35 # Keep slightly higher delay
 
 # --- TMDb API Configuration ---
@@ -167,17 +167,6 @@ def get_popular_movies(max_pages_to_fetch: int) -> List[int]:
         except Exception as e: log.error(f"Error processing TMDb popular movies page {page}: {e}", exc_info=True); break
     unique_ids = list(set(movie_ids)); log.info(f"Finished fetching popular IDs. Total unique IDs collected: {len(unique_ids)}"); return unique_ids
 
-# --- Utility Functions ---
-# (get_text_embedding_dimension, get_image_embedding_dimension remain the same)
-def get_text_embedding_dimension() -> int:
-    try: model = get_text_embedding_model(); dimension = model.get_sentence_embedding_dimension(); log.info(f"Determined text embedding dimension: {dimension}"); return dimension
-    except Exception as e: log.error(f"Could not load/introspect text embedding model: {e}", exc_info=True); raise ValueError("Failed to get text embedding dimension") from e
-
-def get_image_embedding_dimension() -> int:
-    try: model, _ = _get_vision_model_and_processor(); dimension = model.config.projection_dim; log.info(f"Determined image embedding dimension: {dimension}"); return dimension
-    except Exception as e: log.error(f"Could not load/introspect vision embedding model: {e}", exc_info=True); raise ValueError("Failed to get image embedding dimension") from e
-
-# --- Neo4j Interaction Functions ---
 # (run_cypher_queries, batch_load_movies_to_neo4j remain the same)
 def run_cypher_queries(driver: Driver, queries: List[str]):
     log.info(f"Executing {len(queries)} setup queries..."); 
@@ -262,7 +251,7 @@ def main(args):
                      skip_prep_count += 1
                      continue
 
-                 poster_embedding = generate_image_embedding_from_url(movie_details.get('poster_path'))
+                 #poster_embedding = generate_image_embedding_from_url(movie_details.get('poster_path'))
 
                  # --- NEW: Generate Trailer Thumbnail Embedding ---
                 #  trailer_thumb_embedding = [] # Default to empty list
@@ -319,8 +308,6 @@ def main(args):
         if not args.skip_indexes:
             log.info("Attempting to create indexes (Text, Poster, Trailer Thumb Vector, DOB)...")
             try:
-                text_dim = get_text_embedding_dimension(); image_dim = get_image_embedding_dimension()
-                index_queries = get_create_indexes_cypher(text_dim, image_dim)
                 run_cypher_queries(driver, index_queries)
             except ValueError as e: log.error(f"Cannot create indexes - failed to get embedding dimensions: {e}")
             except Exception as e: log.error(f"Failed during index creation phase: {e}", exc_info=True)
