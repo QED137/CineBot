@@ -12,8 +12,12 @@ NEO4J_USERNAME = settings.NEO4J_USERNAME
 NEO4J_PASSWORD = settings.NEO4J_PASSWORD
 OPENAI_API_KEY = settings.OPENAI_API_KEY
 OPENAI_ENDPOINT= settings.OPENAI_ENDPOINT
+TMDB_API_KEY = settings.TMDB_API_KEY
+BASE_URL = "https://api.themoviedb.org/3"
 OMDB_API=settings.OMDB_API
 OMDB_URL = f"http://www.omdbapi.com/?apikey={OMDB_API}&"
+clip_model = CLIPModel.from_pretrained("openai/clip-vit-base-patch32")
+clip_processor = CLIPProcessor.from_pretrained("openai/clip-vit-base-patch32")
 
 # Initialize Neo4j LangChain connection
 def connect_neo():
@@ -63,8 +67,7 @@ def moviePoster(title):
     return data.get('Poster')
 
 # Load model once (reuse for multiple calls)
-clip_model = CLIPModel.from_pretrained("openai/clip-vit-base-patch32")
-clip_processor = CLIPProcessor.from_pretrained("openai/clip-vit-base-patch32")
+
 
 ###generating poster embedding  so that it can store vector information
 def generate_image_embedding_from_url(image_url: str) -> list:
@@ -83,6 +86,32 @@ def generate_image_embedding_from_url(image_url: str) -> list:
         print(f"❌ Failed to generate image embedding: {e}")
         return []
 
+def get_trailer_key(movie_id):
+    """Fetch the YouTube trailer key for a movie by its TMDb ID."""
+    url = f"{BASE_URL}/movie/{movie_id}/videos"
+    params = {"api_key": TMDB_API_KEY}
+    
+    response = requests.get(url, params=params)
+    response.raise_for_status()
+    
+    videos = response.json().get("results", [])
+    
+    # Prioritize official YouTube trailers
+    for video in videos:
+        if video.get("site") == "YouTube" and video.get("type") == "Trailer" and video.get("official"):
+            return video.get("key")
+
+    # Fallback: any YouTube trailer
+    for video in videos:
+        if video.get("site") == "YouTube" and video.get("type") == "Trailer":
+            return video.get("key")
+
+    # Final fallback: any YouTube video
+    for video in videos:
+        if video.get("site") == "YouTube":
+            return video.get("key")
+
+    return None  # No suitable trailer found
 
 
 # ✅ List all vector indexes
@@ -91,8 +120,8 @@ def generate_image_embedding_from_url(image_url: str) -> list:
 
 #generate_embedding_tagline()
 
-#test tagline embeedings 
-#kg=connect_neo()
+# test tagline embeedings 
+# kg=connect_neo()
 # result = kg.query(
 #     """
 #     MATCH (m:Movie) 
@@ -131,8 +160,24 @@ def generate_image_embedding_from_url(image_url: str) -> list:
 #url = f"http://www.omdbapi.com/?apikey={OMDB_API}&t={Titanic}"
 #list1= generate_image_embedding_from_url(url)
 
-poster= moviePoster("Titanic")
 
-print(poster)
-list1= generate_image_embedding_from_url(poster)
-print(list1[:10])
+
+
+
+
+def main():
+    poster= moviePoster("Titanic")
+    print(poster)
+    list1= generate_image_embedding_from_url(poster)
+    print(list1[:10])
+    movie_id = 27205  # Inception
+    trailer_key = get_trailer_key(movie_id)
+    if trailer_key:
+        print("YouTube Trailer URL:", f"https://www.youtube.com/watch?v={trailer_key}")
+    else:
+        print("No trailer found.")
+if __name__ == '__main__':
+    # --- Example usage ---
+    main()
+
+            
