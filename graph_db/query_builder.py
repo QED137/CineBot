@@ -1,3 +1,8 @@
+#######################
+# dummy file to test  query . it has to be deleted
+#
+#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~+
+
 from neo4j import Driver, Session, Transaction
 from typing import List, Dict, Any, Optional
 import logging
