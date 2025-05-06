@@ -156,8 +156,9 @@ import requests
 from PIL import Image
 from transformers import CLIPProcessor, CLIPModel
 import torch
-from typing import Optional, List
 from urllib.parse import quote
+import os
+from typing import List, Dict, Optional
 import logging
 
 # Configure logging
@@ -206,28 +207,63 @@ def create_vector_indexes() -> None:
 
 # --- Embedding Generation ---
 def generate_tagline_embeddings() -> None:
-    kg = connect_neo()
-    kg.query("""
-    MATCH (m:Movie) WHERE m.tagline IS NOT NULL AND m.taglineEmbedding IS NULL
-    WITH m, genai.vector.encode(
-        m.tagline, 
-        "OpenAI", 
-        {token: $apiKey, endpoint: $endpoint}
-    ) AS embedding
-    SET m.taglineEmbedding = embedding
-    """, params={"apiKey": OPENAI_API_KEY, "endpoint": OPENAI_ENDPOINT})
-    logger.info("✅ Tagline embeddings generated.")
+    # Assuming kg is your global Neo4jGraph instance
+    # Assuming settings.OPENAI_API_KEY and settings.OPENAI_ENDPOINT are correctly loaded
+
+    logger.info("Attempting to generate tagline embeddings...")
+    try:
+        # First, count candidates to understand scope
+        candidate_query = """
+        MATCH (m:Movie)
+        WHERE m.tagline IS NOT NULL AND m.tagline <> "" AND m.taglineEmbedding IS NULL
+        RETURN count(m) as candidate_count
+        """
+        candidate_result = kg.query(candidate_query)
+        candidate_count = candidate_result[0]['candidate_count'] if candidate_result and candidate_result[0] else 0
+        logger.info(f"Found {candidate_count} movies with non-empty taglines needing embedding.")
+
+        if candidate_count == 0:
+            return
+
+        # Main embedding query
+        embedding_query = """
+        MATCH (m:Movie)
+        WHERE m.tagline IS NOT NULL
+          AND m.tagline <> ""  // <--- CRITICAL: Filter out empty strings
+          AND m.taglineEmbedding IS NULL
+        WITH m, genai.vector.encode(
+            m.tagline,
+            "OpenAI",
+            {
+                token: $apiKey,
+                endpoint: $endpoint
+            }
+        ) AS emb // Renamed to avoid confusion if 'embedding' is a property name
+        WHERE emb IS NOT NULL AND size(emb) > 0 // Ensure embedding is valid
+        SET m.taglineEmbedding = emb
+        RETURN count(m) as embedded_count
+        """
+        result = kg.query(
+            embedding_query,
+            params={
+                "apiKey": settings.OPENAI_API_KEY,
+                "endpoint": settings.OPENAI_ENDPOINT
+            }
+        )
+
+        embedded_count = result[0]['embedded_count'] if result and result[0] and result[0]['embedded_count'] is not None else 0
+        logger.info(f"✅ Tagline embeddings generation: {embedded_count} movies processed successfully in this run.")
+
+        if embedded_count < candidate_count:
+            logger.warning(f"Not all candidates ({candidate_count}) were embedded. {candidate_count - embedded_count} may have failed in GenAI or were filtered. Check Neo4j debug.log.")
+
+    except Exception as e:
+        logger.error(f"Error during tagline embedding generation: {e}", exc_info=True)
+        logger.error("Ensure OpenAI API key/endpoint are correct and check Neo4j debug.log for GenAI plugin errors.")
 
 
 ### new poster embbedding fucntion poster link is taken for the databse itself
-import os
-import torch
-import requests
-from PIL import Image
-from typing import List, Dict, Optional
-from langchain_community.graphs import Neo4jGraph
-from transformers import CLIPProcessor, CLIPModel
-import logging
+
 
 # Setup
 logging.basicConfig(level=logging.INFO)
@@ -246,75 +282,154 @@ NEO4J_PASSWORD = os.getenv("NEO4J_PASSWORD")
 
 kg = Neo4jGraph(url=NEO4J_URI, username=NEO4J_USERNAME, password=NEO4J_PASSWORD)
 
-def get_poster_urls_batch(kg: Neo4jGraph, skip: int, limit: int = 100) -> List[Dict]:
+def get_poster_urls_batch(kg: Neo4jGraph, skip: int, limit: int) -> List[Dict]:
+    """
+    Fetches a batch of movie IDs and poster URLs that need embedding.
+    Now, `skip` is less critical for iterating through all, but good for resuming.
+    The primary control will be fetching until no more are returned.
+    """
+    # The query itself will only return movies that need embedding.
+    # `SKIP` is still useful if you want to resume from a specific point,
+    # but the loop termination will be based on an empty result.
     return kg.query("""
         MATCH (m:Movie)
         WHERE m.poster_url IS NOT NULL AND m.poster_embedding IS NULL
         RETURN m.tmdb_id AS id, m.poster_url AS url
+        ORDER BY m.tmdb_id // Optional: for consistent processing order if resuming
         SKIP $skip
         LIMIT $limit
     """, params={"skip": skip, "limit": limit})
 
-def generate_batch_image_embeddings(movie_posters: List[Dict]) -> Dict[int, Optional[List[float]]]:
-    embeddings = {}
+def generate_batch_image_embeddings_revised(movie_posters: List[Dict]) -> List[Dict]:
+    results = []
     for poster in movie_posters:
         movie_id = poster["id"]
         image_url = poster["url"]
+        embedding = None
         try:
             response = requests.get(image_url, stream=True, timeout=10)
             response.raise_for_status()
             image = Image.open(response.raw).convert("RGB")
-            inputs = clip_processor(images=image, return_tensors="pt").to(device)
+            inputs = clip_processor(images=image, return_tensors="pt", padding=True, truncation=True).to(device) # Added padding & truncation
 
             with torch.no_grad():
                 features = clip_model.get_image_features(**inputs)
                 features = features / features.norm(p=2, dim=-1, keepdim=True)
-                embeddings[movie_id] = features[0].cpu().tolist()
-
+                embedding = features[0].cpu().tolist()
+            logger.debug(f"Successfully generated embedding for movie ID: {movie_id}")
+        except requests.exceptions.RequestException as req_e:
+            logger.warning(f"⚠️ Movie {movie_id} (URL: {image_url}) failed due to request error: {req_e}")
+        except UnidentifiedImageError: # Specific PIL error
+             logger.warning(f"⚠️ Movie {movie_id} (URL: {image_url}) failed: Could not identify image file.")
         except Exception as e:
-            logger.warning(f"⚠️ Movie {movie_id} failed: {e}")
-            embeddings[movie_id] = None
+            logger.warning(f"⚠️ Movie {movie_id} (URL: {image_url}) failed during embedding generation: {type(e).__name__} - {e}")
+        finally:
+            results.append({"movieId": movie_id, "embedding": embedding})
 
+    if device == "cuda":
         torch.cuda.empty_cache()
-    return embeddings
+    return results
 
-def store_embeddings_in_neo4j(kg: Neo4jGraph, embeddings: Dict[int, List[float]]) -> None:
-    for movie_id, vector in embeddings.items():
-        if vector:
-            kg.query("""
-                MATCH (m:Movie {tmdb_id: $tmdb_id})
-                SET m.poster_embedding = $embedding
-            """, params={
-                "tmdb_id": movie_id,
-                "embedding": vector
-            })
+# --- (store_embeddings_in_neo4j_optimized - keep as previously optimized) ---
 
-def embed_all_posters_in_chunks(kg: Neo4jGraph, batch_size: int = 100, max_movies: int = 10000):
-    resume_file = "last_successful_skip.txt"
-    start = 0
-    if os.path.exists(resume_file):
-        with open(resume_file) as f:
-            start = int(f.read())
 
-    for skip in range(start, max_movies, batch_size):
-        logger.info(f"🔁 Processing batch {skip} to {skip + batch_size - 1}")
-        movies = get_poster_urls_batch(kg, skip=skip, limit=batch_size)
-        if not movies:
-            logger.info("✅ No more movies to process.")
-            break
-
-        embeddings = generate_batch_image_embeddings(movies)
-        store_embeddings_in_neo4j(kg, embeddings)
-
-        with open(resume_file, "w") as f:
-            f.write(str(skip + batch_size))
-
-        logger.info(f"✅ Completed batch {skip}–{skip + batch_size - 1}")
 
 # Uncomment to run the embedding process
 # embed_all_posters_in_chunks(kg, batch_size=100, max_movies=10000)
 
+def store_embeddings_in_neo4j_optimized(kg: Neo4jGraph, embeddings_batch: List[Dict]) -> None:
+    valid_embeddings = [item for item in embeddings_batch if item.get("embedding")]
+    if not valid_embeddings:
+        logger.info("No valid embeddings generated in this batch to store.")
+        return
+    try:
+        result = kg.query("""
+            UNWIND $batch AS item
+            MATCH (m:Movie {tmdb_id: item.movieId})
+            SET m.poster_embedding = item.embedding
+            RETURN count(m) as updated_count
+        """, params={"batch": valid_embeddings})
+        updated_count = result[0]['updated_count'] if result else 0
+        logger.info(f"Successfully stored {updated_count} poster embeddings in Neo4j for the batch.")
+    except Exception as e:
+        logger.error(f"Error storing batch embeddings in Neo4j: {e}", exc_info=True)
 
+
+def embed_all_posters_in_chunks_dynamic(kg: Neo4jGraph, batch_size: int = 50): # Reduced default batch for safety
+    """
+    Dynamically embeds posters for all movies needing it, without a max_movies limit.
+    Uses a resume file to keep track of processed movies by count, not skip position.
+    """
+    resume_file = "processed_poster_count.txt"
+    movies_processed_so_far = 0
+    if os.path.exists(resume_file):
+        try:
+            with open(resume_file, 'r') as f:
+                content = f.read().strip()
+                if content:
+                    movies_processed_so_far = int(content)
+            logger.info(f"Resuming poster embedding. Already processed approximately: {movies_processed_so_far} movies.")
+        except ValueError:
+            logger.warning(f"Could not parse integer from resume file '{resume_file}'. Starting count from 0.")
+            movies_processed_so_far = 0 # Reset if file is corrupt
+        except Exception as e:
+            logger.error(f"Error reading resume file '{resume_file}': {e}. Starting count from 0.")
+            movies_processed_so_far = 0
+
+    total_embedded_this_run = 0
+    current_skip = movies_processed_so_far # Start skipping based on already processed count
+
+    logger.info(f"Starting poster embedding process. Batch size: {batch_size}. Initial skip: {current_skip}")
+
+    while True:
+        logger.info(f"🔁 Fetching next batch of movies to process, skipping first {current_skip} already processed/attempted movies that need embedding.")
+        # We still use 'skip' here to effectively page through the remaining movies that need embedding.
+        # The query `WHERE ... m.poster_embedding IS NULL` means 'skip' applies to the *subset* of movies needing embedding.
+        movies_to_process_this_batch = get_poster_urls_batch(kg, skip=0, limit=batch_size) # Fetch from the start of the *remaining* list
+
+        if not movies_to_process_this_batch:
+            logger.info("✅ No more movies found needing poster embeddings. Process complete.")
+            break # Exit the loop if no movies are returned
+
+        logger.info(f"Fetched {len(movies_to_process_this_batch)} movie posters for the current batch.")
+
+        embeddings_results = generate_batch_image_embeddings_revised(movies_to_process_this_batch)
+        store_embeddings_in_neo4j_optimized(kg, embeddings_results)
+
+        num_in_batch = len(movies_to_process_this_batch)
+        movies_processed_so_far += num_in_batch # This count is now the total *attempted* for embedding
+        total_embedded_this_run += len([res for res in embeddings_results if res.get("embedding")]) # Count successful ones
+
+        try:
+            with open(resume_file, "w") as f:
+                # The resume file now stores the count of movies passed to get_poster_urls_batch
+                # so that on resume, we effectively 'skip' these.
+                # However, since we always query with skip=0 for the *remaining* items,
+                # the resume file is more like a progress tracker than a direct skip value
+                # for the get_poster_urls_batch function in this dynamic approach.
+                # A simpler resume: just log total processed. For robust resume, you'd need to track TMDB_IDs.
+                # For this dynamic approach, the 'skip' parameter in get_poster_urls_batch
+                # becomes less about resuming a global list and more about simple pagination
+                # if the internal Neo4j query optimizer benefits from it.
+                # The `WHERE m.poster_embedding IS NULL` is the primary driver for fetching unprocessed items.
+                # For now, we'll continue to update `current_skip` as if it's a running total,
+                # acknowledging that the `skip=0` in the query handles finding the *next* unprocessed batch.
+                # The resume file will reflect the total number of movies *attempted* in previous runs.
+                # The important part is that each batch only processes movies whose embedding IS NULL.
+                f.write(str(movies_processed_so_far))
+        except Exception as e:
+            logger.error(f"Error writing to resume file '{resume_file}': {e}")
+
+        logger.info(f"✅ Completed batch. Movies processed in this batch: {num_in_batch}. Total successfully embedded this run: {total_embedded_this_run}. Total attempted across all runs: {movies_processed_so_far}")
+
+        # No explicit `current_skip += batch_size` is needed here because the `get_poster_urls_batch`
+        # with `skip=0` and `WHERE m.poster_embedding IS NULL` will always fetch the *next*
+        # available batch of unprocessed movies. The `movies_processed_so_far` is more of a
+        # progress indicator for the resume file.
+
+    logger.info("🏁 Poster embedding process finished for all available movies.")
+
+#####test function 
 
 # --- Embedding Viewer ---
 
@@ -345,20 +460,36 @@ def main():
     #     print(f"🎬 Trailer: https://www.youtube.com/watch?v={trailer_key}")
 
     # print_movie_embeddings("Titanic")
-    print("Trying to write to the database")
+    #print("Trying to write to the database")
     
-    result=kg.query(
-    """
-    MATCH(n) 
-    RETURN COUNT(n)
-    """
-    )
-    print("checking query connection- ", result)
-    print("try to write into the database")
+    #result=kg.query(
+    #"""
+    #MATCH(n) 
+    #RETURN COUNT(n)
+    #"""
+    #)
+    #print("checking query connection- ", result)
+    #print("try to write into the database")
     #writeMovie_to_DB()
-    
+    # Setup logging
+    logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
+    logger = logging.getLogger(__name__)
 
+    # Load CLIP (this should be done once globally ideally)
+    clip_model_name = "openai/clip-vit-base-patch32"
+    clip_model = CLIPModel.from_pretrained(clip_model_name)
+    clip_processor = CLIPProcessor.from_pretrained(clip_model_name)
+    device = "cuda" if torch.cuda.is_available() else "cpu"
+    clip_model.to(device)
+    logger.info(f"CLIP model loaded to {device}.")
 
+    #embed_all_posters_in_chunks_dynamic(kg, batch_size=100) # Use a smaller batch size for testing
+    # titles_for_tagline_test = ["Inception", "The Matrix"]
+    # if kg and OPENAI_API_KEY: # Ensure kg and API key are available
+    #     generate_tagline_embeddings_test(kg, titles_for_tagline_test)
+    # else:
+    #     logger.error("Neo4j connection (kg) or OpenAI API Key not available for tagline test.")
+    generate_tagline_embeddings() 
 if __name__ == '__main__':
     main()
 

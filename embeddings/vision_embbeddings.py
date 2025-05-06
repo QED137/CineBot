@@ -4,7 +4,7 @@ import requests
 from PIL import Image
 from transformers import CLIPProcessor, CLIPModel
 import logging
-
+from langchain_community.graphs import Neo4jGraph
 logger = logging.getLogger(__name__)
 device = "cuda" if torch.cuda.is_available() else "cpu"
 
