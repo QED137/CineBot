@@ -1,3 +1,12 @@
+############################################################
+#  this function is responsible for  generating embeddings #
+#  for tagline of movie                                    #
+#                                                          #
+#                                                          #
+#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~#
+
+
+
 import time
 import logging
 # Assuming 'settings' is your config object and 'kg' is your Neo4jGraph instance
