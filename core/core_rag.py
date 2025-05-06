@@ -8,8 +8,8 @@ import torch
 from PIL import Image
 from openai import OpenAI
 from transformers import CLIPProcessor, CLIPModel # Assuming these are still needed for query image embedding
-# from langchain_community.graphs import Neo4jGraph # Or from langchain_neo4j
-from langchain_neo4j import Neo4jGraph # Using the newer one
+from langchain_community.graphs import Neo4jGraph # Or from langchain_neo4j
+#from langchain_neo4j import Neo4jGraph # Using the newer one
 
 from config import settings # Your settings file
 
