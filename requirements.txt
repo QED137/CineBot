@@ -40,4 +40,6 @@ kaggle                # Official Kaggle API client (for downloading datasets via
 # faiss-cpu           # For FAISS vector search (if not using Neo4j vector index)
 # langchain-huggingface # If using HuggingFace Hub models/endpoints directly via Langchain
 langchain_neo4j
+
 Neo4jGraph
+openai 
