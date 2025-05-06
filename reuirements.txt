@@ -29,6 +29,7 @@ requests              # For making HTTP requests (e.g., to TMDB/OMDB)
 python-dotenv         # For loading .env files (useful for local dev, less critical in Codespace w/ secrets)
 fuzzywuzzy            # For fuzzy string matching (e.g., movie titles)
 python-Levenshtein    # Speeds up fuzzywuzzy calculations (recommended)
+torch
 
 # === Data Source Interaction ===
 kaggle                # Official Kaggle API client (for downloading datasets via CLI)
