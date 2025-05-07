@@ -16,7 +16,8 @@ from config import settings # Your settings file
 # --- Global Initializations ---
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
-
+import os
+os.environ['CUDA_VISIBLE_DEVICES'] = '-1'  # Force CPU usage
 # --- OpenAI LLM Client ---
 openai_llm_client = None
 if hasattr(settings, 'OPENAI_API_KEY') and settings.OPENAI_API_KEY:
