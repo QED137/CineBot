@@ -1,43 +1,197 @@
-# requirements.txt
-
-# === Core Data Handling ===
-pandas         # Data manipulation and reading CSVs
-numpy          # Numerical operations (often a dependency of pandas)
-thefuzz[speedup]
-
-# === Neo4j Database Interaction ===
-neo4j          # Official Neo4j Python driver
-
-# === Langchain Core & Integrations ===
-langchain             # Core Langchain framework
-langchain-community   # Community integrations (includes Neo4jGraph, vector stores)
-langchain-openai      # OpenAI specific integrations (ChatOpenAI, OpenAIEmbeddings)
-langchain-core        # Core abstractions (often installed automatically, but good to list)
-openai                # Direct OpenAI client library (needed by langchain-openai)
-
-# === Embeddings & NLP ===
-sentence-transformers # For generating sentence/text embeddings (e.g., all-MiniLM-L6-v2)
-transformers[sentencepiece] # Underlying library for many NLP models, sentencepiece often needed
-keybert               # For keyword extraction
-
-# === Web Application & UI ===
-streamlit             # The web application framework
-streamlit-chat        # Component for creating chat interfaces (optional but used before)
-
-# === External APIs & Utilities ===
-requests              # For making HTTP requests (e.g., to TMDB/OMDB)
-python-dotenv         # For loading .env files (useful for local dev, less critical in Codespace w/ secrets)
-fuzzywuzzy            # For fuzzy string matching (e.g., movie titles)
-python-Levenshtein    # Speeds up fuzzywuzzy calculations (recommended)
-torch
-
-# === Data Source Interaction ===
-kaggle                # Official Kaggle API client (for downloading datasets via CLI)
-# Alternatively, if you prefer the newer library:
-# kagglehub
-
-# === Optional (Add if explicitly needed later) ===
-# faiss-cpu           # For FAISS vector search (if not using Neo4j vector index)
-# langchain-huggingface # If using HuggingFace Hub models/endpoints directly via Langchain
-langchain_neo4j
-openai 
+aiohappyeyeballs==2.6.1
+aiohttp==3.11.18
+aiosignal==1.3.2
+altair==5.5.0
+annotated-types==0.7.0
+anyio==4.9.0
+argon2-cffi==23.1.0
+argon2-cffi-bindings==21.2.0
+arrow==1.3.0
+asttokens==3.0.0
+async-lru==2.0.5
+attrs==25.3.0
+babel==2.17.0
+beautifulsoup4==4.13.3
+bleach==6.2.0
+blinker==1.9.0
+cachetools==5.5.2
+certifi==2025.1.31
+cffi==1.17.1
+charset-normalizer==3.4.1
+click==8.1.8
+colorama==0.4.6
+comm==0.2.2
+contourpy==1.3.1
+cycler==0.12.1
+dataclasses-json==0.6.7
+debugpy==1.8.13
+decorator==5.2.1
+defusedxml==0.7.1
+distro==1.9.0
+executing==2.2.0
+fastjsonschema==2.21.1
+filelock==3.13.1
+fonttools==4.56.0
+fqdn==1.5.1
+frozenlist==1.6.0
+fsspec==2024.12.0
+fuzzywuzzy==0.18.0
+gitdb==4.0.12
+GitPython==3.1.44
+greenlet==3.2.1
+h11==0.14.0
+httpcore==1.0.7
+httpx==0.28.1
+httpx-sse==0.4.0
+huggingface-hub==0.30.2
+idna==3.10
+iniconfig==2.1.0
+ipykernel==6.29.5
+ipython==9.0.2
+ipython_pygments_lexers==1.1.1
+isoduration==20.11.0
+jedi==0.19.2
+Jinja2==3.1.6
+jiter==0.9.0
+joblib==1.4.2
+json5==0.10.0
+json_repair==0.39.1
+jsonpatch==1.33
+jsonpointer==3.0.0
+jsonschema==4.23.0
+jsonschema-specifications==2024.10.1
+jupyter-events==0.12.0
+jupyter-lsp==2.2.5
+jupyter-server-mathjax==0.2.6
+jupyter_client==8.6.3
+jupyter_core==5.7.2
+jupyter_server==2.15.0
+jupyter_server_terminals==0.5.3
+jupyterlab==4.3.6
+jupyterlab_git==0.51.0
+jupyterlab_pygments==0.3.0
+jupyterlab_server==2.27.3
+kaggle==1.7.4.2
+keybert==0.9.0
+kiwisolver==1.4.8
+langchain==0.3.24
+langchain-community==0.3.23
+langchain-core==0.3.56
+langchain-neo4j==0.4.0
+langchain-openai==0.3.14
+langchain-text-splitters==0.3.8
+langsmith==0.3.39
+Levenshtein==0.27.1
+markdown-it-py==3.0.0
+MarkupSafe==3.0.2
+marshmallow==3.26.1
+matplotlib==3.10.1
+matplotlib-inline==0.1.7
+mdurl==0.1.2
+mistune==3.1.2
+mpmath==1.3.0
+multidict==6.4.3
+mypy_extensions==1.1.0
+narwhals==1.31.0
+nbclient==0.10.2
+nbconvert==7.16.6
+nbdime==4.0.2
+nbformat==5.10.4
+neo4j==5.28.1
+neo4j-graphrag==1.7.0
+nest-asyncio==1.6.0
+networkx==3.3
+notebook_shim==0.2.4
+numpy==2.2.4
+openai==1.76.2
+orjson==3.10.18
+overrides==7.7.0
+packaging==24.2
+pandas==2.2.3
+pandocfilters==1.5.1
+parso==0.8.4
+pexpect==4.9.0
+pillow==11.1.0
+platformdirs==4.3.6
+plotly==6.0.1
+pluggy==1.5.0
+prometheus_client==0.21.1
+prompt_toolkit==3.0.50
+propcache==0.3.1
+protobuf==6.30.2
+psutil==7.0.0
+ptyprocess==0.7.0
+pure_eval==0.2.3
+pyarrow==20.0.0
+pycparser==2.22
+pydantic==2.11.4
+pydantic-settings==2.9.1
+pydantic_core==2.33.2
+pydeck==0.9.1
+Pygments==2.19.1
+pyparsing==3.2.1
+pypdf==5.4.0
+pytest==8.3.5
+python-dateutil==2.9.0.post0
+python-dotenv==1.1.0
+python-json-logger==3.3.0
+python-Levenshtein==0.27.1
+python-slugify==8.0.4
+pytz==2025.1
+PyYAML==6.0.2
+pyzmq==26.3.0
+RapidFuzz==3.13.0
+referencing==0.36.2
+regex==2024.11.6
+requests==2.32.3
+requests-toolbelt==1.0.0
+rfc3339-validator==0.1.4
+rfc3986-validator==0.1.1
+rich==14.0.0
+rpds-py==0.23.1
+safetensors==0.5.3
+scikit-learn==1.6.1
+scipy==1.15.2
+seaborn==0.13.2
+Send2Trash==1.8.3
+sentence-transformers==4.1.0
+sentencepiece==0.2.0
+setuptools==76.0.0
+six==1.17.0
+smmap==5.0.2
+sniffio==1.3.1
+soupsieve==2.6
+SQLAlchemy==2.0.40
+stack-data==0.6.3
+streamlit==1.45.0
+streamlit-chat==0.1.1
+sympy==1.13.1
+tenacity==9.1.2
+terminado==0.18.1
+text-unidecode==1.3
+thefuzz==0.22.1
+threadpoolctl==3.6.0
+tiktoken==0.9.0
+tinycss2==1.4.0
+tokenizers==0.21.1
+toml==0.10.2
+torch==2.6.0+cpu
+tornado==6.4.2
+tqdm==4.67.1
+traitlets==5.14.3
+transformers==4.51.3
+types-python-dateutil==2.9.0.20241206
+types-PyYAML==6.0.12.20250402
+typing-inspect==0.9.0
+typing-inspection==0.4.0
+typing_extensions==4.12.2
+tzdata==2025.1
+uri-template==1.3.0
+urllib3==2.3.0
+watchdog==6.0.0
+wcwidth==0.2.13
+webcolors==24.11.1
+webencodings==0.5.1
+websocket-client==1.8.0
+yarl==1.20.0
+zstandard==0.23.0
