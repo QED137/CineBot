@@ -11,7 +11,7 @@ from transformers import CLIPProcessor, CLIPModel # Assuming these are still nee
 #from langchain_community.graphs import Neo4jGraph # Or from langchain_neo4j
 from langchain_neo4j import Neo4jGraph # Using the newer one
 
-from config import settings # Your settings file
+from config.settings import settings # Your settings file
 
 NEO4J_URI = settings.NEO4J_URI
 NEO4J_USERNAME = settings.NEO4J_USERNAME
