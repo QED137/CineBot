@@ -4,13 +4,7 @@ openai
 langchain-core
 langchain-neo4j # Or langchain-community, as per your import
 
-#transformers[sentencepiece]
-#torch
-#Pillow
-
-streamlit==1.32.0
-neo4j==5.14.0
-torch==2.1.0
-transformers==4.38.0
-pillow==10.1.0
-numpy==1.26.0
+transformers[sentencepiece]
+torch
+Pillow
+streamlit
