@@ -484,6 +484,9 @@ from typing import List, Dict, Optional # For type hinting
 # (llm_explanation_text, initial_retrieved_movies)
 from core.core_rag import recommend_by_text, recommend_by_poster_image, logger
 
+import os
+os.environ['CUDA_VISIBLE_DEVICES'] = '-1'  # Force CPU usage
+
 # --- Page Configuration ---
 st.set_page_config(
     page_title="CineBot - Multimodal Movie Recommender",
