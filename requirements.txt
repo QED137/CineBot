@@ -5,6 +5,6 @@ langchain-core
 langchain-neo4j # Or langchain-community, as per your import
 
 transformers[sentencepiece]
-torch
+torch==2.2.0
 Pillow
 streamlit
