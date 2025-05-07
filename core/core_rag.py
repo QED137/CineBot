@@ -13,6 +13,15 @@ from langchain_neo4j import Neo4jGraph # Using the newer one
 
 from config import settings # Your settings file
 
+NEO4J_URI = settings.NEO4J_URI
+NEO4J_USERNAME = settings.NEO4J_USERNAME
+NEO4J_PASSWORD = settings.NEO4J_PASSWORD
+OPENAI_API_KEY = settings.OPENAI_API_KEY
+OPENAI_ENDPOINT = settings.OPENAI_ENDPOINT
+TMDB_API_KEY = settings.TMDB_API_KEY
+OMDB_API = settings.OMDB_API
+BASE_URL = "https://api.themoviedb.org/3"
+OMDB_URL = f"http://www.omdbapi.com/?apikey={OMDB_API}&"
 # --- Global Initializations ---
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
@@ -47,15 +56,6 @@ if hasattr(settings, 'NEO4J_URI'):
 else:
     logger.error("Neo4j URI not found in settings.")
 
-NEO4J_URI = settings.NEO4J_URI
-NEO4J_USERNAME = settings.NEO4J_USERNAME
-NEO4J_PASSWORD = settings.NEO4J_PASSWORD
-OPENAI_API_KEY = settings.OPENAI_API_KEY
-OPENAI_ENDPOINT = settings.OPENAI_ENDPOINT
-TMDB_API_KEY = settings.TMDB_API_KEY
-OMDB_API = settings.OMDB_API
-BASE_URL = "https://api.themoviedb.org/3"
-OMDB_URL = f"http://www.omdbapi.com/?apikey={OMDB_API}&"
 # --- CLIP Model (for query image embedding) ---
 CLIP_MODEL_NAME_CONST = "openai/clip-vit-base-patch32"
 clip_model = None
