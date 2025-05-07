@@ -8,3 +8,4 @@ transformers[sentencepiece]
 torch==2.2.0
 Pillow
 streamlit
+python-dotenv
