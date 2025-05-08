@@ -4,6 +4,9 @@
 graph databases (Neo4j) and Large Language Models (LLMs) to create an intelligent and scalable recommendation
 system. By leveraging the structured nature of graph databases and the dynamic
 capabilities of LLMs, the system delivers contextually relevant and accurate recommendations for movies.
+<p align="center">
+  <img src="appscreenshot.png" width="600" alt="CineBot Screenshot">
+</p>
 
 # Key Features 
   * Graph Database Integration: Utilizes Neo4j to structure and query complex data relationships efficiently.
@@ -25,6 +28,10 @@ capabilities of LLMs, the system delivers contextually relevant and accurate rec
   * Semantic Search: Queries are processed using semantic embeddings to retrieve contextually similar movies.
   * RAG Workflow: LLMs augment responses by retrieving relevant data from Neo4j.
   * Dynamic Recommendations: Personalized recommendations and answers are generated based on user input.
+
+
+
+
 # Setup Instructions:
   1. Clone the repository:
 
