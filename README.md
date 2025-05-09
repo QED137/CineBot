@@ -5,7 +5,7 @@ graph databases (Neo4j) and Large Language Models (LLMs) to create an intelligen
 system. By leveraging the structured nature of graph databases and the dynamic
 capabilities of LLMs, the system delivers contextually relevant and accurate recommendations for movies.
 <p align="center">
-  <img src="appscreenshot.png" width="600" alt="CineBot Screenshot">
+  <img src="appscreenshot2.png" width="600" alt="CineBot Screenshot">
 </p>
 
 # Key Features 
