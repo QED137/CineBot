@@ -95,7 +95,22 @@ st.markdown(
 
 
 
-st.title("🎬 CineBot - Intelligent Movie Recommender") # Slightly shorter title
+st.markdown(
+    """
+    <style>
+    .custom-title {
+        font-size: 32px;
+        text-align: center;
+        color: #00acc1;
+        font-family: 'Segoe UI', sans-serif;
+        margin-bottom: 0.5rem;
+    }
+    </style>
+    <div class='custom-title'>🎬 CineBot — Intelligent Movie Recommender</div>
+    """,
+    unsafe_allow_html=True
+)
+
 st.caption("Discover movies using text descriptions or poster images!")
 
 # --- Session State ---
