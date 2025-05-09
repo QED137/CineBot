@@ -48,16 +48,51 @@ st.set_page_config(
 # Note box at the top
 st.markdown(
     """
-  <div style="background-color:#1e1e1e; padding: .5px; border-radius: 10px; border-left: 5px solid #00acc1;">
-    <h6 style="color:#ffffff; margin: 0;">🔔 Note:</h6>
-    <p style="color:#dddddd; margin: 0;">
-        This app runs on the free tier of Neo4j AuraDB, which imposes limits on node and relationship counts, potentially restricting full graph traversal and query capabilities.
-    </p>
-</div>
+    <style>
+    .fancy-marquee-container {
+        height: 42px;
+        overflow: hidden;
+        position: relative;
+        background: rgba(0, 172, 193, 0.05);
+        border-radius: 10px;
+        border: 1px solid rgba(0, 172, 193, 0.2);
+        box-shadow: 0 0 8px rgba(0, 172, 193, 0.2);
+        backdrop-filter: blur(6px);
+        padding-left: 10px;
+    }
 
+    .fancy-marquee-text {
+        position: absolute;
+        width: 100%;
+        height: 100%;
+        margin: 0;
+        line-height: 42px;
+        font-size: 15px;
+        font-family: 'Segoe UI', sans-serif;
+        font-weight: 500;
+        background: linear-gradient(90deg, #00e5ff, #18ffff, #00acc1);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        color: #00e5ff; /* fallback color */
+        text-shadow: 0 0 6px rgba(0, 172, 193, 0.3);
+        animation: scrollLeft 15s linear infinite;
+    }
+
+    @keyframes scrollLeft {
+        0%   { transform: translateX(100%); }
+        100% { transform: translateX(-100%); }
+    }
+    </style>
+
+    <div class="fancy-marquee-container">
+        <p class="fancy-marquee-text">
+        ⚠️ Demo runs on Neo4j Free Tier — limited graph scale and no vector indexing may affect RAG performance. Not for production use.
+        </p>
+    </div>
     """,
     unsafe_allow_html=True
 )
+
 
 
 st.title("🎬 CineBot - Intelligent Movie Recommender") # Slightly shorter title
@@ -242,6 +277,7 @@ with tab2:
             st.session_state.last_image_filename = uploaded_image.name
             st.session_state.text_recommendations_detailed = []
             st.session_state.image_recommendations_detailed = []
+            
             with st.spinner("CineBot is analyzing the poster... 🎨 (Might take a moment)"):
                 try:
                     image_bytes = uploaded_image.getvalue()
