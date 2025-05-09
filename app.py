@@ -183,7 +183,7 @@ st.session_state.cols_per_row_slider = st.sidebar.slider(
 )
 with st.sidebar:
     #st.markdown("## 🔧 Powered By")
-    st.image("logo2.png", width=400)
+    st.image("./photos/logo2.png", width=400)
     #st.image("banner.png", width=100)
     #st.image("static/streamlit_logo.png", width=100)
     st.markdown("## 🔧 Powered By: NEO4J")
