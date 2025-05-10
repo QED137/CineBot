@@ -199,7 +199,7 @@ def display_recommendation_cards_v2(detailed_recommendations: List[Dict]):
 
                         poster_url = rec.get("poster_url")
                         if poster_url and poster_url.startswith("http"):
-                            st.image(poster_url, use_column_width=True) # Scales with column
+                            st.image(poster_url, use_container_width=True) # Scales with column
                         else:
                             st.caption(f"Poster for {rec.get('title', '')} (N/A)")
 

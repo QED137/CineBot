@@ -437,7 +437,7 @@ def print_movie_embeddings(title: str):
     kg = connect_neo()
     result = kg.query("""
         MATCH (m:Movie {title: $title})
-        RETURN m.title AS title, m.posterEmbedding AS posterVec, m.taglineEmbedding AS taglineVec
+        RETURN m.title AS title, m.poster_embedding AS posterVec, m.taglineEmbedding AS taglineVec
     """, params={"title": title})
 
     if not result:
@@ -482,14 +482,14 @@ def main():
     device = "cuda" if torch.cuda.is_available() else "cpu"
     clip_model.to(device)
     logger.info(f"CLIP model loaded to {device}.")
-
+    # for embedding call the following
     #embed_all_posters_in_chunks_dynamic(kg, batch_size=100) # Use a smaller batch size for testing
     # titles_for_tagline_test = ["Inception", "The Matrix"]
     # if kg and OPENAI_API_KEY: # Ensure kg and API key are available
     #     generate_tagline_embeddings_test(kg, titles_for_tagline_test)
     # else:
     #     logger.error("Neo4j connection (kg) or OpenAI API Key not available for tagline test.")
-    generate_tagline_embeddings() 
+    #generate_tagline_embeddings() 
 if __name__ == '__main__':
     main()
 
