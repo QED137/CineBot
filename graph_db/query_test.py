@@ -15,6 +15,8 @@ from typing import Optional, List
 from urllib.parse import quote
 import logging
 
+
+
 # Configure logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -220,6 +222,44 @@ def print_movie_embeddings(title: str):
     print(f"🖼️ Poster Embedding (first 10 dims): {movie['posterVec'][:10] if movie['posterVec'] else '❌ Not available'}")
     print(f"💬 Tagline Embedding (first 10 dims): {movie['taglineVec'][:10] if movie['taglineVec'] else '❌ Not available'}")
 
+def testing_image_embedding():
+    device = "cuda" if torch.cuda.is_available() else "cpu"
+    model = CLIPModel.from_pretrained("openai/clip-vit-base-patch32").to(device)
+    processor = CLIPProcessor.from_pretrained("openai/clip-vit-base-patch32")
+
+    # Load and preprocess image
+    url = "http://images.cocodataset.org/val2017/000000039769.jpg"
+    image = Image.open(requests.get(url, stream=True).raw).convert("RGB")
+    inputs = processor(images=image, return_tensors="pt", padding=True).to(device)
+
+    # Generate embedding
+    with torch.no_grad():
+        image_features = model.get_image_features(**inputs)
+        image_features = image_features / image_features.norm(p=2, dim=-1, keepdim=True)
+
+    vector = image_features[0].cpu().tolist()
+    print("📷 Image embedding (first 10 dims):", vector[:10])
+    return vector
+##the folloing function is testing the simirlyty finidng on the basis of input image vector embeddings
+def searching_movie_like_input(vector):
+    if not vector or not isinstance(vector, list):
+        raise ValueError("❌ Embedding must be a non-empty list.")
+
+    query = """
+    CALL db.index.vector.queryNodes('movie_poster_embeddings', $topK, $embedding)
+    YIELD node, score
+    RETURN node.title AS title, node.poster_url AS poster, score
+    ORDER BY score DESC
+    """
+
+    return kg.query(query, params={
+        "embedding": vector,
+        "topK": 6
+    })
+
+# the fucntion above is working
+        
+
 # --- Main Workflow ---
 def main():
     # create_vector_indexes()
@@ -231,19 +271,24 @@ def main():
     #     print(f"🎬 Trailer: https://www.youtube.com/watch?v={trailer_key}")
 
     # print_movie_embeddings("Titanic")
-    print("Trying to write to the database")
+    vec = testing_image_embedding()
+    if vec:
+        print("✅ Image embedding generated.")
+        results = searching_movie_like_input(vec)
+        for movie in results:
+            print(f"{movie['title']} (score: {movie['score']:.3f})")
+    else:
+        print("❌ Embedding was None.")
     
-    result=kg.query(
-    """
-    MATCH(n) 
-    RETURN COUNT(n)
-    """
-    )
-    print("checking query connection- ", result)
-    print("try to write into the database")
+    
+    # print("Trying to write to the database")
+    #print("checking query connection- ", query2)
+    
     #writeMovie_to_DB()
     
-
+    # vect=testing_image_embedding()
+    # print(vect)
+ 
 
 if __name__ == '__main__':
     main()
