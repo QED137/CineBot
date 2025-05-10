@@ -4,6 +4,7 @@ from PIL import Image
 import io # For handling image bytes
 import re # For parsing LLM output
 from typing import List, Dict, Optional # For type hinting
+from utils.poster_filter import is_valid_movie_poster
 
 # Import your RAG functions and logger from rag_core.py
 # Make sure core/core_rag.py has the RAG functions that return a tuple:
@@ -306,26 +307,35 @@ with tab2:
         key="image_uploader_widget"
     )
 
-    if uploaded_image is not None:
-        st.image(uploaded_image, caption=f"Your query poster: {uploaded_image.name}", width=150) # Reduced width
+if uploaded_image is not None:
+    st.image(uploaded_image, caption=f"Your query poster: {uploaded_image.name}", width=150)
 
-        if st.button("Get Image-Based Recommendations", key="image_submit_btn", type="primary"):
-            st.session_state.last_image_filename = uploaded_image.name
-            st.session_state.text_recommendations_detailed = []
-            st.session_state.image_recommendations_detailed = []
+    if st.button("Get Image-Based Recommendations", key="image_submit_btn", type="primary"):
+        st.session_state.last_image_filename = uploaded_image.name
+        st.session_state.text_recommendations_detailed = []
+        st.session_state.image_recommendations_detailed = []
+
+        with st.spinner("CineBot is analyzing the poster... 🎨 (Might take a moment)"):
+            try:
+                image_bytes = uploaded_image.getvalue()
+
+                # ✅ Validate if it's really a poster
             
-            with st.spinner("CineBot is analyzing the poster... 🎨 (Might take a moment)"):
-                try:
-                    image_bytes = uploaded_image.getvalue()
-                    llm_response_text, initial_retrieved_movies = recommend_by_poster_image(
-                        image_bytes, top_k_retrieval=5, num_recommendations=st.session_state.cols_per_row_slider # Get N recs
-                    )
-                    parsed_llm_recs = parse_llm_recommendations(llm_response_text)
-                    detailed_recs = map_llm_recs_to_retrieved_details(parsed_llm_recs, initial_retrieved_movies)
-                    st.session_state.image_recommendations_detailed = detailed_recs
-                except Exception as e:
-                    logger.error(f"Error in image recommendation flow: {e}", exc_info=True)
-                    st.error("Oops! Something went wrong. CineBot needs its glasses.")
+                if not is_valid_movie_poster(image_bytes):
+                    st.warning("❌ This doesn't look like a valid movie poster. Please upload a poster-style image.")
+                    st.stop()  # Exit early if not valid
+
+                # ✅ Proceed with embedding and RAG logic
+                llm_response_text, initial_retrieved_movies = recommend_by_poster_image(
+                    image_bytes, top_k_retrieval=5, num_recommendations=st.session_state.cols_per_row_slider
+                )
+                parsed_llm_recs = parse_llm_recommendations(llm_response_text)
+                detailed_recs = map_llm_recs_to_retrieved_details(parsed_llm_recs, initial_retrieved_movies)
+                st.session_state.image_recommendations_detailed = detailed_recs
+
+            except Exception as e:
+                logger.error(f"Error in image recommendation flow: {e}", exc_info=True)
+                st.error("Oops! Something went wrong. CineBot needs its glasses.")
 
     if st.session_state.image_recommendations_detailed:
         st.markdown("---")
