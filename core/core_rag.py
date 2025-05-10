@@ -12,6 +12,7 @@ from transformers import CLIPProcessor, CLIPModel # Assuming these are still nee
 from langchain_neo4j import Neo4jGraph # Using the newer one
 
 from config import settings # Your settings file
+import io
 
 NEO4J_URI = settings.NEO4J_URI
 NEO4J_USERNAME = settings.NEO4J_USERNAME
@@ -60,16 +61,25 @@ else:
 CLIP_MODEL_NAME_CONST = "openai/clip-vit-base-patch32"
 clip_model = None
 clip_processor = None
-DEVICE = "cpu" # Default to CPU, can be overridden if CUDA available
+DEVICE = "cpu"
+
 try:
-    clip_processor = CLIPProcessor.from_pretrained(CLIP_MODEL_NAME_CONST, use_fast=True)
+    logger.info("⏳ Loading CLIP processor and model...")
+    clip_processor = CLIPProcessor.from_pretrained(CLIP_MODEL_NAME_CONST)
     clip_model = CLIPModel.from_pretrained(CLIP_MODEL_NAME_CONST)
+    
     if torch.cuda.is_available():
         DEVICE = "cuda"
+        logger.info("✅ CUDA available. Using GPU.")
+    else:
+        logger.info("🧠 Using CPU for inference.")
+    
     clip_model.to(DEVICE)
-    logger.info(f"CLIP model '{CLIP_MODEL_NAME_CONST}' loaded to {DEVICE}.")
+    logger.info(f"✅ CLIP model '{CLIP_MODEL_NAME_CONST}' successfully loaded on {DEVICE}.")
+
 except Exception as e:
-    logger.error(f"Failed to load CLIP model: {e}", exc_info=True)
+    logger.exception("❌ Failed to load CLIP model and processor.")
+
 
 
 # --- Embedding and Retrieval Functions (Placeholders - you should have these implemented) ---
@@ -111,17 +121,74 @@ def retrieve_movies_by_text_similarity(query_text: str, top_k: int = 5) -> List[
         logger.error(f"Error querying Neo4j for text similarity: {e}")
         return []
 
-def get_query_image_embedding(image_bytes: bytes) -> Optional[List[float]]: # Takes bytes now
+# def get_query_image_embedding(image_bytes: bytes) -> Optional[List[float]]: # Takes bytes now
+#     if not clip_model or not clip_processor:
+#         logger.error("CLIP model or processor not loaded.")
+#         return None
+#     try:
+#         image = Image.open(io.BytesIO(image_bytes)).convert("RGB") # Load from bytes
+#         #inputs = clip_processor(images=image, return_tensors="pt", padding=True, truncation=True).to(DEVICE)
+#         inputs = clip_processor(images=image, return_tensors="pt").to(DEVICE)
+
+#         with torch.no_grad():
+#             image_features = clip_model.get_image_features(**inputs)
+#             image_features = image_features / image_features.norm(p=2, dim=-1, keepdim=True)
+#             return image_features[0].cpu().tolist()
+#     except Exception as e:
+#         logger.error(f"Error generating embedding for query image: {e}", exc_info=True)
+#         return None
+# def get_query_image_embedding(image_bytes: bytes) -> Optional[List[float]]:
+#     if not clip_model or not clip_processor:
+#         logger.error("CLIP model or processor not loaded.")
+#         return None
+#     if not image_bytes:
+#         logger.warning("No image bytes provided for embedding.")
+#         return None
+#     try:
+#         image = Image.open(io.BytesIO(image_bytes)).convert("RGB")
+
+#         # ===> RE-ADD PADDING AND TRUNCATION HERE <===
+#         inputs = clip_processor(
+#             images=image,
+#             return_tensors="pt",
+#             padding=True,       # Or padding="max_length"
+#             truncation=True
+#         ).to(DEVICE)
+
+#         with torch.no_grad():
+#             image_features = clip_model.get_image_features(**inputs)
+#             # Normalize the image features
+#             image_features = image_features / image_features.norm(p=2, dim=-1, keepdim=True)
+#         return image_features[0].cpu().tolist()
+#     except ValueError as ve: # Catch ValueError specifically
+#         logger.error(f"ValueError during image processing/tensor creation: {ve}", exc_info=True)
+#         if "padding=True" in str(ve):
+#             logger.error("This likely means the CLIPProcessor needs explicit padding/truncation for this image or batch setup.")
+#         return None
+#     except Exception as e:
+#         logger.error(f"Unexpected error generating embedding for query image: {e}", exc_info=True)
+#         return None
+def get_query_image_embedding(image_bytes: bytes) -> Optional[List[float]]:
     if not clip_model or not clip_processor:
         logger.error("CLIP model or processor not loaded.")
         return None
+    if not image_bytes:
+        logger.warning("No image bytes provided for embedding.")
+        return None
     try:
-        image = Image.open(io.BytesIO(image_bytes)).convert("RGB") # Load from bytes
-        inputs = clip_processor(images=image, return_tensors="pt", padding=True, truncation=True).to(DEVICE)
+        image = Image.open(io.BytesIO(image_bytes)).convert("RGB")
+
+        # ✅ Do NOT pass padding/truncation here — image only
+        inputs = clip_processor(
+            images=image,
+            return_tensors="pt"
+        ).to(DEVICE)
+
         with torch.no_grad():
             image_features = clip_model.get_image_features(**inputs)
             image_features = image_features / image_features.norm(p=2, dim=-1, keepdim=True)
-            return image_features[0].cpu().tolist()
+        return image_features[0].cpu().tolist()
+
     except Exception as e:
         logger.error(f"Error generating embedding for query image: {e}", exc_info=True)
         return None
@@ -277,6 +344,34 @@ EXPLANATION: [EXPLANATION_1]
     return llm_explanation_text, initial_retrieved_movies
 
 
+# def recommend_by_poster_image(query_image_bytes: bytes, top_k_retrieval: int = 5, num_recommendations: int = 2) -> tuple[str, List[Dict]]:
+#     logger.info("RAG - Image Query received.")
+#     query_embedding = get_query_image_embedding(query_image_bytes)
+
+#     if not query_embedding:
+#         return "I'm sorry, I couldn't process the poster image you provided.", []
+
+#     initial_retrieved_movies = retrieve_movies_by_poster_similarity(query_embedding, top_k=top_k_retrieval)
+
+#     if not initial_retrieved_movies:
+#         return "I couldn't find movies with posters visually similar to the one you provided.", []
+
+#     movie_context_for_llm = format_movies_for_llm_prompt(initial_retrieved_movies, "poster image")
+    
+#     prompt = f"""User has provided a movie poster. They are looking for movies with a similar visual style or implied genre/mood.
+
+# Context from movie database (these movies have visually similar posters and we have their full details):
+# {movie_context_for_llm}
+
+# Based on this context of visually similar movies, please recommend {num_recommendations} movie(s).
+# For EACH recommended movie, provide:
+# 1. The EXACT TITLE of the movie as listed in the context.
+# 2. A short, engaging EXPLANATION (1-2 sentences) describe the movie using its tagline or overview.
+# Make your response engaging.
+# """ # Emphasize using EXACT title
+
+#     llm_explanation_text = get_llm_recommendation(prompt)
+#     return llm_explanation_text, initial_retrieved_movies
 def recommend_by_poster_image(query_image_bytes: bytes, top_k_retrieval: int = 5, num_recommendations: int = 2) -> tuple[str, List[Dict]]:
     logger.info("RAG - Image Query received.")
     query_embedding = get_query_image_embedding(query_image_bytes)
@@ -290,18 +385,23 @@ def recommend_by_poster_image(query_image_bytes: bytes, top_k_retrieval: int = 5
         return "I couldn't find movies with posters visually similar to the one you provided.", []
 
     movie_context_for_llm = format_movies_for_llm_prompt(initial_retrieved_movies, "poster image")
-    
-    prompt = f"""User has provided a movie poster. They are looking for movies with a similar visual style or implied genre/mood.
+
+    prompt = f"""
+User has provided a movie poster. They are looking for movies with a similar visual style or implied genre/mood.
 
 Context from movie database (these movies have visually similar posters and we have their full details):
 {movie_context_for_llm}
 
-Based on this context of visually similar movies, please recommend {num_recommendations} movie(s).
-For EACH recommended movie, provide:
-1. The EXACT TITLE of the movie as listed in the context.
-2. A short, engaging EXPLANATION (1-2 sentences) describe the movie using its tagline or overview.
-Make your response engaging.
-""" # Emphasize using EXACT title
+Please recommend {num_recommendations} movie(s). Use the following format for **each** recommendation:
+MOVIE: [Exact Title]
+EXPLANATION: [A short (1–2 sentence) engaging explanation based on the tagline or overview.]
+
+Example:
+MOVIE: Inception
+EXPLANATION: A visually stunning sci-fi thriller that dives into the world of dreams, perfect for fans of layered storytelling.
+
+Now generate your recommendations in that format:
+"""
 
     llm_explanation_text = get_llm_recommendation(prompt)
     return llm_explanation_text, initial_retrieved_movies
