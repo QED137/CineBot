@@ -59,6 +59,7 @@ st.markdown(
         box-shadow: 0 0 8px rgba(0, 172, 193, 0.2);
         backdrop-filter: blur(6px);
         padding-left: 10px;
+        margin-bottom: 1.5rem;
     }
 
     .fancy-marquee-text {
@@ -76,6 +77,8 @@ st.markdown(
         color: #00e5ff; /* fallback color */
         text-shadow: 0 0 6px rgba(0, 172, 193, 0.3);
         animation: scrollLeft 15s linear infinite;
+        
+        
     }
 
     @keyframes scrollLeft {
@@ -103,15 +106,15 @@ st.markdown(
         text-align: center;
         color: #00acc1;
         font-family: 'Segoe UI', sans-serif;
-        margin-bottom: 0.5rem;
+        margin-bottom: 5rem;
     }
     </style>
-    <div class='custom-title'>🎬 CineBot — Intelligent Movie Recommender</div>
-    """,
+    <div class='custom-title'>CineBot — Intelligent Movie Recommender</div>
+    """,    
     unsafe_allow_html=True
 )
 
-st.caption("Discover movies using text descriptions or poster images!")
+#st.caption("Discover movies using text descriptions or poster images!")
 
 # --- Session State ---
 if 'text_recommendations_detailed' not in st.session_state:
@@ -244,10 +247,28 @@ with st.sidebar:
 tab1, tab2 = st.tabs(["🔍 Recommend by Text", "🖼️ Recommend by Poster"]) # Shorter tab name
 
 with tab1:
-    st.header("Describe Your Desired Movie")
+    #st.header("Describe Your Desired Movie")
+    st.markdown(
+    """
+    <style>
+    .custom-title2 {
+        margin-top:1.5rem;
+        font-size: 22px;
+        text-align: left;
+        color: white;
+        font-family: 'Segoe UI', sans-serif;
+        margin-bottom: 1.5rem;
+    }
+    </style>
+    <div class='custom-title2'>Describe Your Desired Movie</div>
+    """,    
+    unsafe_allow_html=True
+)
+    
     text_query = st.text_area(
         "E.g., 'A heartwarming animated film about friendship and adventure, perfect for families.'",
         key="text_query_input_area",
+        placeholder="Discover movies using text descriptions or poster images!",
         value=st.session_state.last_text_query,
         height=80  # Reduced height
     )
