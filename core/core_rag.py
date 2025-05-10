@@ -343,35 +343,6 @@ EXPLANATION: [EXPLANATION_1]
     llm_explanation_text = get_llm_recommendation(prompt)
     return llm_explanation_text, initial_retrieved_movies
 
-
-# def recommend_by_poster_image(query_image_bytes: bytes, top_k_retrieval: int = 5, num_recommendations: int = 2) -> tuple[str, List[Dict]]:
-#     logger.info("RAG - Image Query received.")
-#     query_embedding = get_query_image_embedding(query_image_bytes)
-
-#     if not query_embedding:
-#         return "I'm sorry, I couldn't process the poster image you provided.", []
-
-#     initial_retrieved_movies = retrieve_movies_by_poster_similarity(query_embedding, top_k=top_k_retrieval)
-
-#     if not initial_retrieved_movies:
-#         return "I couldn't find movies with posters visually similar to the one you provided.", []
-
-#     movie_context_for_llm = format_movies_for_llm_prompt(initial_retrieved_movies, "poster image")
-    
-#     prompt = f"""User has provided a movie poster. They are looking for movies with a similar visual style or implied genre/mood.
-
-# Context from movie database (these movies have visually similar posters and we have their full details):
-# {movie_context_for_llm}
-
-# Based on this context of visually similar movies, please recommend {num_recommendations} movie(s).
-# For EACH recommended movie, provide:
-# 1. The EXACT TITLE of the movie as listed in the context.
-# 2. A short, engaging EXPLANATION (1-2 sentences) describe the movie using its tagline or overview.
-# Make your response engaging.
-# """ # Emphasize using EXACT title
-
-#     llm_explanation_text = get_llm_recommendation(prompt)
-#     return llm_explanation_text, initial_retrieved_movies
 def recommend_by_poster_image(query_image_bytes: bytes, top_k_retrieval: int = 5, num_recommendations: int = 2) -> tuple[str, List[Dict]]:
     logger.info("RAG - Image Query received.")
     query_embedding = get_query_image_embedding(query_image_bytes)
