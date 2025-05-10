@@ -1,3 +1,9 @@
+#####################################################################################
+# this is has not been used in wrtitng data into the databasegit
+#
+#
+########################################################################################
+
 import argparse
 import logging
 import time
