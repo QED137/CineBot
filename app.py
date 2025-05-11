@@ -5,9 +5,9 @@ import io # For handling image bytes
 import re # For parsing LLM output
 from typing import List, Dict, Optional # For type hinting
 from utils.poster_filter import is_valid_movie_poster
-from utils.create_streamlit_env import write_streamlit_secrets_from_env
+#from utils.create_streamlit_env import write_streamlit_secrets_from_env
 
-write_streamlit_secrets_from_env()
+#write_streamlit_secrets_from_env()
 
 # Import your RAG functions and logger from rag_core.py
 # Make sure core/core_rag.py has the RAG functions that return a tuple:
