@@ -46,31 +46,30 @@ import os
 os.environ['CUDA_VISIBLE_DEVICES'] = '-1'  # Force CPU usage - Keep if needed
 
 # --- Page Configuration ---
-st.set_page_config(
-    page_title="CineBot - Multimodal Movie Recommender",
-    page_icon="🎬",
-    layout="wide"
-)
 
-# --- App Header ---
-# Note box at the top
+st.set_page_config(
+    page_title="CineBot - AI Movie Recommender",
+    page_icon="🤖",
+    layout="wide",
+    initial_sidebar_state="expanded"
+)
 st.markdown(
     """
     <style>
-    .fancy-marquee-container {
+    .marquee-container {
         height: 42px;
         overflow: hidden;
         position: relative;
-        background: rgba(0, 172, 193, 0.05);
+        background: rgba(15, 12, 41, 0.8);
         border-radius: 10px;
-        border: 1px solid rgba(0, 172, 193, 0.2);
-        box-shadow: 0 0 8px rgba(0, 172, 193, 0.2);
+        border: 1px solid rgba(249, 203, 40, 0.3);
+        box-shadow: 0 0 12px rgba(249, 203, 40, 0.1);
         backdrop-filter: blur(6px);
         padding-left: 10px;
         margin-bottom: 1.5rem;
     }
 
-    .fancy-marquee-text {
+    .marquee-text {
         position: absolute;
         width: 100%;
         height: 100%;
@@ -79,14 +78,11 @@ st.markdown(
         font-size: 15px;
         font-family: 'Segoe UI', sans-serif;
         font-weight: 500;
-        background: linear-gradient(90deg, #00e5ff, #18ffff, #00acc1);
+        background: linear-gradient(90deg, #f9cb28, #ff9d00, #f9cb28);
         -webkit-background-clip: text;
         -webkit-text-fill-color: transparent;
-        color: #00e5ff; /* fallback color */
-        text-shadow: 0 0 6px rgba(0, 172, 193, 0.3);
-        animation: scrollLeft 15s linear infinite;
-        
-        
+        text-shadow: 0 0 8px rgba(249, 203, 40, 0.3);
+        animation: scrollLeft 20s linear infinite;
     }
 
     @keyframes scrollLeft {
@@ -95,32 +91,89 @@ st.markdown(
     }
     </style>
 
-    <div class="fancy-marquee-container">
-        <p class="fancy-marquee-text">
-        ⚠️ This app runs on Neo4j Free Tier and public APIs — RAG performance may be limited!!
+    <div class="marquee-container">
+        <p class="marquee-text">
+        ⚠️ This app runs on Neo4j Free Tier and public APIs — Performance may vary • Try both text and image search! 
         </p>
     </div>
     """,
     unsafe_allow_html=True
 )
-
-
-
-st.markdown(
-    """
-    <style>
-    .custom-title {
-        font-size: 32px;
-        text-align: center;
-        color: #00acc1;
-        font-family: 'Segoe UI', sans-serif;
-        margin-bottom: 5rem;
+# --- Custom CSS Styling ---
+st.markdown("""
+<style>
+    /* Main container styling */
+    .stApp {
+        background: linear-gradient(135deg, #0f0c29, #302b63, #24243e);
+        color: #ffffff;
     }
-    </style>
-    <div class='custom-title'>CineBot — Intelligent Movie Recommender</div>
-    """,    
-    unsafe_allow_html=True
-)
+    
+    /* Sidebar styling */
+    [data-testid="stSidebar"] {
+        background: rgba(15, 12, 41, 0.8) !important;
+        border-right: 1px solid #444;
+    }
+    
+    /* Button styling */
+    .stButton>button {
+        background: linear-gradient(90deg, #ff4d4d, #f9cb28);
+        color: white;
+        border: none;
+        border-radius: 8px;
+        padding: 0.5rem 1rem;
+        font-weight: 600;
+        transition: all 0.3s ease;
+    }
+    
+    .stButton>button:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 15px rgba(249, 203, 40, 0.4);
+    }
+    
+    /* Card styling */
+    .movie-card {
+        background: rgba(255, 255, 255, 0.1);
+        backdrop-filter: blur(10px);
+        border-radius: 12px;
+        padding: 1.5rem;
+        transition: all 0.3s ease;
+        height: 100%;
+        display: flex;
+        flex-direction: column;
+    }
+    
+    .movie-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 10px 25px rgba(0, 0, 0, 0.3);
+    }
+    
+    /* Tab styling */
+    [data-testid="stTab"] {
+        background: transparent !important;
+    }
+    
+    /* Text input styling */
+    .stTextArea textarea {
+        background: rgba(255, 255, 255, 0.1) !important;
+        color: white !important;
+    }
+    
+    /* Header styling */
+    h1, h2, h3,h4, h5, h6 {
+        color: #f9cb28 !important;
+    }
+</style>
+""", unsafe_allow_html=True)
+
+# --- App Header ---
+st.markdown("""
+<div style="text-align: center; margin-bottom: 2rem;">
+    <h1 style="font-size: 2.5rem; margin-bottom: 0.5rem;">🤖 CineBot</h1>
+    <p style="font-size: 1.1rem; color: #aaa; max-width: 700px; margin: 0 auto;">
+        Discover your next favorite movie using AI-powered text or image search
+    </p>
+</div>
+""", unsafe_allow_html=True)
 
 #st.caption("Discover movies using text descriptions or poster images!")
 
@@ -191,7 +244,36 @@ def map_llm_recs_to_retrieved_details(
 def display_recommendation_cards_v2(detailed_recommendations: List[Dict]):
     if not detailed_recommendations:
         return
-
+    st.markdown("""
+    <style>
+    .movie-card {
+        background-color: #111;
+        padding: 1rem;
+        border-radius: 15px;
+        box-shadow: 0px 0px 10px rgba(255,255,255,0.1);
+        text-align: center;
+        transition: transform 0.2s ease;
+        margin-bottom: 1.5rem;
+    }
+    .movie-card:hover {
+        transform: scale(1.05);
+        box-shadow: 0px 0px 20px rgba(255,255,255,0.3);
+    }
+    .movie-title {
+        color: white;
+        font-size: 1.1rem;
+        margin: 0.4rem 0;
+    }
+    .movie-tagline {
+        color: #ccc;
+        font-size: 0.9rem;
+        margin-bottom: 0.4rem;
+    }
+    img {
+        border-radius: 10px;
+    }
+    </style>
+""", unsafe_allow_html=True)
     cols_per_row = st.session_state.get('cols_per_row_slider', 3) # Default to 3
 
     for i in range(0, len(detailed_recommendations), cols_per_row):
@@ -243,35 +325,30 @@ st.session_state.cols_per_row_slider = st.sidebar.slider(
     key="cols_slider"
 )
 with st.sidebar:
-    #st.markdown("## 🔧 Powered By")
-    st.image("./photos/logo2.png", width=400)
-    #st.image("banner.png", width=100)
-    #st.image("static/streamlit_logo.png", width=100)
+  
+    st.image("./photos/logo2.png", width=350)
+  
     st.markdown("## 🔧 Powered By: NEO4J")
     
-
+    st.markdown("---")
+    st.markdown("""
+    <div style="margin-top: 0rem; font-size: 0.8rem; color: #888;">
+        <p>✍️ JANMAJAY KUMAR</p>
+        
+    </div>
+    """, unsafe_allow_html=True)
 
 
 tab1, tab2 = st.tabs(["🔍 Recommend by Text", "🖼️ Recommend by Poster"]) # Shorter tab name
 
 with tab1:
     #st.header("Describe Your Desired Movie")
-    st.markdown(
-    """
-    <style>
-    .custom-title2 {
-        margin-top:1.5rem;
-        font-size: 22px;
-        text-align: left;
-        color: white;
-        font-family: 'Segoe UI', sans-serif;
-        margin-bottom: 1.5rem;
-    }
-    </style>
-    <div class='custom-title2'>Describe Your Desired Movie</div>
-    """,    
-    unsafe_allow_html=True
-)
+    st.markdown("""
+    <div style="margin-bottom: 2rem;">
+        <h3>Find Movies by Description</h3>
+        <p style="color: #aaa;">Describe what you're looking for and let AI find matches</p>
+    </div>
+    """, unsafe_allow_html=True)
     
     text_query = st.text_area(
         "E.g., 'A heartwarming animated film about friendship and adventure, perfect for families.'",
@@ -302,7 +379,7 @@ with tab1:
 
     if st.session_state.text_recommendations_detailed:
         st.markdown("---")
-        st.subheader("CineBot's Picks For You (Text-Based):") # Changed to subheader
+        st.subheader("CineBot's Picks For You (Text-Based):") 
         display_recommendation_cards_v2(st.session_state.text_recommendations_detailed)
     # Simplified retry: user can just click the button again if needed.
 
@@ -315,7 +392,7 @@ with tab2:
     )
 
 if uploaded_image is not None:
-    st.image(uploaded_image, caption=f"Your query poster: {uploaded_image.name}", width=150)
+    st.image(uploaded_image, caption=f"Your query poster: {uploaded_image.name}", width=100)
 
     if st.button("Get Image-Based Recommendations", key="image_submit_btn", type="primary"):
         st.session_state.last_image_filename = uploaded_image.name
@@ -326,13 +403,13 @@ if uploaded_image is not None:
             try:
                 image_bytes = uploaded_image.getvalue()
 
-                # ✅ Validate if it's really a poster
+                # Validate if it's really a poster
             
                 if not is_valid_movie_poster(image_bytes):
-                    st.warning("❌ This doesn't look like a valid movie poster. Please upload a poster-style image.")
+                    st.warning("This doesn't look like a valid movie poster. Please upload a poster-style image.")
                     st.stop()  # Exit early if not valid
 
-                # ✅ Proceed with embedding and RAG logic
+                # Proceed with embedding and RAG logic
                 llm_response_text, initial_retrieved_movies = recommend_by_poster_image(
                     image_bytes, top_k_retrieval=5, num_recommendations=st.session_state.cols_per_row_slider
                 )
@@ -346,11 +423,11 @@ if uploaded_image is not None:
 
     if st.session_state.image_recommendations_detailed:
         st.markdown("---")
-        st.subheader("CineBot's Picks For You (Image-Based):") # Changed to subheader
+        st.subheader("CineBot's Picks For You (Image-Based):") 
         display_recommendation_cards_v2(st.session_state.image_recommendations_detailed)
 
 # --- Footer ---
-st.markdown("---") # Use markdown for a standard hr
+st.markdown("---") 
 st.markdown("<p style='text-align: center; font-size: small;'>Powered by Neo4j | OpenAI | CLIP | Streamlit</p>", unsafe_allow_html=True)
 
 logger.info("Streamlit app initialized/reloaded with compact layout.")
