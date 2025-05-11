@@ -13,6 +13,10 @@ from utils.poster_filter import is_valid_movie_poster
 # Make sure core/core_rag.py has the RAG functions that return a tuple:
 # (llm_explanation_text, initial_retrieved_movies)
 # Mocking the import if core_rag is not available for testing
+import os
+os.environ["STREAMLIT_WATCHER_TYPE"] = "none"
+
+
 try:
     from core.core_rag import recommend_by_text, recommend_by_poster_image, logger
 except ImportError:
