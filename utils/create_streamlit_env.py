@@ -20,3 +20,10 @@ OPENAI_ENDPOINT = "{os.getenv("OPENAI_ENDPOINT", "https://api.openai.com/v1")}"
 TMDB_API_KEY = "{os.getenv("TMDB_API_KEY", "")}"
 OMDB_API = "{os.getenv("OMDB_API", "")}"
 """)
+
+def main():
+    print(" creat streamlit env is called ")
+
+if __name__== "__main__":
+    main()
+            
