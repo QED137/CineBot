@@ -93,7 +93,7 @@ st.markdown(
 
     <div class="marquee-container">
         <p class="marquee-text">
-        ⚠️ This app runs on Neo4j Free Tier and public APIs — Performance may vary • Try both text and image search! 
+        ⚠️ This app runs on Neo4j Free Tier and public APIs — Performance may vary!!
         </p>
     </div>
     """,
@@ -168,10 +168,10 @@ st.markdown("""
 # --- App Header ---
 st.markdown("""
 <div style="text-align: center; margin-bottom: 2rem;">
-    <h1 style="font-size: 2.5rem; margin-bottom: 0.5rem;">🤖 CineBot</h1>
-    <p style="font-size: 1.1rem; color: #aaa; max-width: 700px; margin: 0 auto;">
-        Discover your next favorite movie using AI-powered text or image search
-    </p>
+    <h1 style="font-size: 2.5rem; margin-bottom: 0.5rem;">🤖 CineBot – </h1>
+    <h6 >
+      Built with Neo4j, OpenAI, and CLIP — fusing knowledge graphs, vector search, and multimodal AI for intelligent recommendations.
+    </h6>
 </div>
 """, unsafe_allow_html=True)
 
