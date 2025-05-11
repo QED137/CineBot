@@ -97,7 +97,7 @@ st.markdown(
 
     <div class="fancy-marquee-container">
         <p class="fancy-marquee-text">
-        ⚠️ Demo runs on Neo4j Free Tier — limited graph scale and no vector indexing may affect RAG performance. Not for production use.
+        ⚠️ This app runs on Neo4j Free Tier and public APIs — RAG performance may be limited!!
         </p>
     </div>
     """,
