@@ -36,7 +36,7 @@ capabilities of LLMs, the system delivers contextually relevant and accurate rec
   1. Clone the repository:
 
      ```
-        git clone https://github.com/QED137/cineBoat.git
+        git clone https://github.com/QED137/CineBot.git
         cd cineBoat
  2. Install Dependencies
 
