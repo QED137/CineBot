@@ -1,5 +1,4 @@
 # core/cypher_query_generation.py
-
 import logging
 from typing import List, Dict, Tuple, Optional
 from openai import OpenAI
