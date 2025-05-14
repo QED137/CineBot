@@ -93,7 +93,7 @@ st.markdown(
 
     <div class="marquee-container">
         <p class="marquee-text">
-        ⚠️ This app runs on Neo4j Free Tier and public APIs — Performance may vary!!
+        This app runs on Neo4j Free Tier and public APIs — Performance may vary!!
         </p>
     </div>
     """,
