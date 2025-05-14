@@ -168,7 +168,7 @@ st.markdown("""
 # --- App Header ---
 st.markdown("""
 <div style="text-align: center; margin-bottom: 2rem;">
-    <h1 style="font-size: 2.5rem; margin-bottom: 0.5rem;">🤖 CineBot – AI Movie Recommender</h1>
+    <h1 style="font-size: 2.5rem; margin-bottom: 0.5rem;"> CineBot – AI Movie Recommender</h1>
     <p style="font-size: 1rem; color: #ccc; max-width: 700px; margin: 0 auto;">
       Neo4j • OpenAI • CLIP • Vector Search • Multimodal Retrieval
     </p>
