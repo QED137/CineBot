@@ -328,7 +328,7 @@ with st.sidebar:
   
     st.image("./photos/logo2.png", width=350)
   
-    st.markdown("## 🔧 Powered By: NEO4J")
+    st.markdown("##  Powered By: NEO4J")
     
     st.markdown("---")
     st.markdown("""
@@ -339,7 +339,7 @@ with st.sidebar:
     """, unsafe_allow_html=True)
 
 
-tab1, tab2 = st.tabs(["🔍 Recommend by Text", "🖼️ Recommend by Poster"]) # Shorter tab name
+tab1, tab2 = st.tabs([" Recommend by Text", "Recommend by Poster"]) # Shorter tab name
 
 with tab1:
     #st.header("Describe Your Desired Movie")
@@ -363,7 +363,7 @@ with tab1:
             st.session_state.last_text_query = text_query
             st.session_state.text_recommendations_detailed = []
             st.session_state.image_recommendations_detailed = []
-            with st.spinner("CineBot is thinking... 🧠 (Might take a moment)"):
+            with st.spinner("CineBot is thinking...  (Might take a moment)"):
                 try:
                     llm_response_text, initial_retrieved_movies = recommend_by_text(
                         text_query, top_k_retrieval=5, num_recommendations=st.session_state.cols_per_row_slider # Get N recs
@@ -399,7 +399,7 @@ if uploaded_image is not None:
         st.session_state.text_recommendations_detailed = []
         st.session_state.image_recommendations_detailed = []
 
-        with st.spinner("CineBot is analyzing the poster... 🎨 (Might take a moment)"):
+        with st.spinner("CineBot is analyzing the poster...  (Might take a moment)"):
             try:
                 image_bytes = uploaded_image.getvalue()
 
