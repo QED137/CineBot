@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CineBot – AI Movie Recommender</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <header>
+        <div class="header-content">
+            <h1>CineBot – AI Movie Recommender</h1>
+            <p>Neo4j • OpenAI • CLIP • Vector Search • Multimodal Retrieval</p>
+        </div>
+    </header>
+
+    <main>
+        <section class="sidebar">
+            <img src="photos/logo2.png" alt="Logo" width="350">
+            <h3>Powered By: NEO4J</h3>
+        </section>
+
+        <section class="content">
+            <div class="tabs">
+                <button class="tab" onclick="showTab('textTab')">Recommend by Text</button>
+                <button class="tab" onclick="showTab('imageTab')">Recommend by Poster</button>
+            </div>
+
+            <!-- Text-based Recommendation Tab -->
+            <div class="tab-content" id="textTab">
+                <h3>Find Movies by Description</h3>
+                <textarea id="textQuery" placeholder="Describe the movie you're looking for..."></textarea>
+                <button onclick="getTextRecommendations()">Get Text-Based Recommendations</button>
+                <div id="textRecommendations"></div>
+            </div>
+
+            <!-- Image-based Recommendation Tab -->
+            <div class="tab-content" id="imageTab" style="display: none;">
+                <h3>Find Movies by Poster Image</h3>
+                <input type="file" id="imageUpload" accept="image/*">
+                <button onclick="getImageRecommendations()">Get Image-Based Recommendations</button>
+                <div id="imageRecommendations"></div>
+            </div>
+        </section>
+    </main>
+
+    <footer>
+        <p>Powered by Neo4j | OpenAI | CLIP</p>
+    </footer>
+
+    <script src="app.js"></script>
+</body>
+</html>
