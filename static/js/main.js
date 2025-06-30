@@ -1,21 +1,22 @@
 // static/js/main.js
 
 document.addEventListener('DOMContentLoaded', () => {
-    // --- DOM Element References (same as before) ---
+    // --- DOM Element References ---
     const textForm = document.getElementById('text-recommendation-form');
     const imageForm = document.getElementById('image-recommendation-form');
     const textQueryInput = document.getElementById('text-query-input');
     const imageUploader = document.getElementById('image-uploader');
     const imageFilenameDisplay = document.getElementById('image-filename');
-    const resultsContainer = document.getElementById('results-container');
-    const statusContainer = document.getElementById('status-container');
+    const chatContainer = document.getElementById('chat-container');
+    const imageResultsContainer = document.getElementById('image-results-container');
     const colsSlider = document.getElementById('cols-slider');
     const sliderValue = document.getElementById('slider-value');
     const inspireBtn = document.getElementById('inspire-btn');
 
     // --- State Management ---
-    let lastRequest = { endpoint: null, body: null };
+    let chatHistory = [];
     let isTyping = false;
+    const buttonOriginalContent = {};
 
     // --- Typewriter Logic ---
     async function typeWriter(element, text, speed = 40) {
@@ -23,6 +24,7 @@ document.addEventListener('DOMContentLoaded', () => {
         element.placeholder = '';
         for (let i = 0; i < text.length; i++) {
             await new Promise(resolve => setTimeout(resolve, speed));
+            if (!isTyping) break;
             element.placeholder += text.charAt(i);
         }
         isTyping = false;
@@ -32,102 +34,220 @@ document.addEventListener('DOMContentLoaded', () => {
         if (isTyping) return;
         try {
             const response = await fetch('/api/suggestion');
+            if (!response.ok) throw new Error('Failed to fetch suggestion');
             const data = await response.json();
             if (data.suggestion) await typeWriter(textQueryInput, data.suggestion);
         } catch (error) {
             console.error("Failed to fetch suggestion:", error);
-            textQueryInput.placeholder = "e.g., A mind-bending sci-fi thriller...";
+            textQueryInput.placeholder = "Ask for a movie or a follow-up question...";
         }
     }
 
     // --- UI Interaction ---
-    const tabs = document.querySelectorAll('.tab-link');
-    tabs.forEach(tab => {
-        tab.addEventListener('click', () => {
+    document.querySelectorAll('.tab-link').forEach(tab => {
+        tab.addEventListener('click', (e) => {
             document.querySelector('.tab-link.active').classList.remove('active');
-            tab.classList.add('active');
-            const targetId = tab.dataset.tab;
+            e.currentTarget.classList.add('active');
+            const targetId = e.currentTarget.dataset.tab;
             document.querySelector('.tab-content.active').classList.remove('active');
             document.getElementById(targetId).classList.add('active');
-            clearAllAndShowEmptyState();
         });
     });
 
     colsSlider.addEventListener('input', (e) => {
         sliderValue.textContent = e.target.value;
-        resultsContainer.style.gridTemplateColumns = `repeat(${e.target.value}, 1fr)`;
+        // This relies on your CSS using a variable, e.g., grid-template-columns: repeat(var(--grid-cols, 3), 1fr);
+        imageResultsContainer.style.setProperty('--grid-cols', e.target.value);
     });
 
     imageUploader.addEventListener('change', () => {
         const file = imageUploader.files[0];
-        imageFilenameDisplay.textContent = file ? file.name : '';
+        imageFilenameDisplay.textContent = file ? file.name : 'No file chosen';
     });
 
     inspireBtn.addEventListener('click', fetchAndAnimateSuggestion);
 
-    // --- Form Submission ---
+    // --- NEW: Textarea Enhancements ---
+    textQueryInput.addEventListener('keydown', (e) => {
+        if (isTyping) isTyping = false; // Stop typewriter if user starts typing
+        
+        // Submit on Enter, but not Shift+Enter
+        if (e.key === 'Enter' && !e.shiftKey) {
+            e.preventDefault(); // Prevent new line
+            textForm.requestSubmit(); // Programmatically submit the form
+        }
+    });
+
+    textQueryInput.addEventListener('input', () => {
+        // Auto-resize the textarea
+        textQueryInput.style.height = 'auto';
+        textQueryInput.style.height = (textQueryInput.scrollHeight) + 'px';
+    });
+    // --- End of New Code ---
+
+    // --- Form Submission Logic ---
     textForm.addEventListener('submit', (e) => {
         e.preventDefault();
         const query = textQueryInput.value.trim();
-        if (!query) { showError("Please enter a movie description."); return; }
-        const body = { query, num_recs: parseInt(colsSlider.value) };
-        fetchRecommendations('/api/recommend/text', body, e.submitter);
+        if (!query || isTyping) return;
+
+        addMessageToChat('user', query);
+        chatHistory.push({ role: "user", content: query });
+        textQueryInput.value = '';
+        textQueryInput.style.height = 'auto'; // Reset height after submit
+        textQueryInput.placeholder = '';
+
+        const body = { query, history: chatHistory, num_recs: 3 };
+        fetchTextRecommendations('/api/recommend/text', body, e.currentTarget.querySelector('button[type="submit"]'));
     });
 
     imageForm.addEventListener('submit', (e) => {
         e.preventDefault();
         const file = imageUploader.files[0];
-        if (!file) { showError("Please upload a poster image."); return; }
+        if (!file) {
+            showErrorInImageTab("Please upload a poster image.");
+            return;
+        }
         const formData = new FormData();
         formData.append('poster', file);
         formData.append('num_recs', parseInt(colsSlider.value));
-        fetchRecommendations('/api/recommend/image', formData, e.submitter);
+        fetchImageRecommendations('/api/recommend/image', formData, e.currentTarget.querySelector('button[type="submit"]'));
     });
 
-    // --- Core Fetch & Display Logic ---
-    async function fetchRecommendations(endpoint, body, submitBtn) {
-        lastRequest = { endpoint, body }; // Store for "Try Again"
-        setButtonLoadingState(submitBtn, true);
-        clearAllAndShowSkeletons();
-        
-        try {
-            const options = { method: 'POST' };
-            if (body instanceof FormData) options.body = body;
-            else { options.headers = { 'Content-Type': 'application/json' }; options.body = JSON.stringify(body); }
+    // ... (The rest of your main.js file remains exactly the same as the one I provided before) ...
+    // fetchTextRecommendations, fetchImageRecommendations, addMessageToChat, etc.
 
+    // --- Fetch & Display Logic ---
+    async function fetchTextRecommendations(endpoint, body, submitBtn) {
+        setButtonLoadingState(submitBtn, true);
+        addMessageToChat('assistant', '', true);
+
+        try {
+            const options = { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) };
             const response = await fetch(endpoint, options);
-            resultsContainer.innerHTML = '';
+            const data = await response.json();
+
             if (!response.ok) {
-                const errorData = await response.json();
-                throw new Error(errorData.error || `Server responded with status ${response.status}`);
+                throw new Error(data.error || `Server responded with status ${response.status}`);
             }
-            const recommendations = await response.json();
-            displayRecommendations(recommendations);
+            
+            updateLastAssistantMessage(data.llm_response, data.html);
+            chatHistory.push({ role: "assistant", content: data.llm_response });
+
         } catch (error) {
-            console.error('Fetch error:', error);
-            showError(error.message, true); // Show error with a "Try Again" button
+            updateLastAssistantMessage(`Oops! An error occurred: ${error.message}`, null, true);
+            chatHistory.push({ role: "assistant", content: `Error: ${error.message}` });
+        } finally {
+            setButtonLoadingState(submitBtn, false);
+            textQueryInput.focus();
+        }
+    }
+
+    async function fetchImageRecommendations(endpoint, body, submitBtn) {
+        setButtonLoadingState(submitBtn, true);
+        imageResultsContainer.innerHTML = '';
+        showSkeletonsInImageTab(parseInt(colsSlider.value));
+
+        try {
+            const options = { method: 'POST', body };
+            const response = await fetch(endpoint, options);
+            const data = await response.json();
+            
+            imageResultsContainer.innerHTML = ''; // Clear skeletons
+            if (!response.ok) { throw new Error(data.error); }
+
+            imageResultsContainer.innerHTML = data.html;
+            attachFeedbackListeners(imageResultsContainer);
+
+        } catch (error) {
+            showErrorInImageTab(error.message);
         } finally {
             setButtonLoadingState(submitBtn, false);
         }
     }
-    
-    // --- Professional UI Enhancements ---
+
+    // --- Chat UI Display Functions ---
+    function addMessageToChat(role, text, isLoading = false) {
+        const messageDiv = document.createElement('div');
+        messageDiv.className = `chat-message ${role}`;
+        
+        if (isLoading) {
+            messageDiv.innerHTML = `<div class="typing-indicator"><span></span><span></span><span></span></div>`;
+        } else {
+            const contentDiv = document.createElement('div');
+            contentDiv.className = 'chat-text-content';
+            contentDiv.textContent = text; // Use textContent for security
+            messageDiv.appendChild(contentDiv);
+        }
+        
+        chatContainer.appendChild(messageDiv);
+        chatContainer.scrollTop = chatContainer.scrollHeight;
+    }
+
+    function updateLastAssistantMessage(text, htmlCards, isError = false) {
+        const lastMessage = chatContainer.querySelector('.chat-message.assistant:last-child');
+        if (!lastMessage) return;
+        
+        lastMessage.innerHTML = '';
+            
+        if (isError) {
+            lastMessage.innerHTML = `<p class="error-message">${text}</p>`;
+        } else {
+            const parsedText = text.replace(/MOVIE:.*?\nEXPLANATION:/gs, '').replace(/MOVIE:.*$/gs, '').trim();
+            const textContentDiv = document.createElement('div');
+            textContentDiv.className = 'chat-text-content';
+            textContentDiv.textContent = parsedText || text; // Fallback to raw text if parsing fails
+            lastMessage.appendChild(textContentDiv);
+
+            if (htmlCards) {
+                const cardsContainer = document.createElement('div');
+                cardsContainer.className = 'chat-results-container';
+                cardsContainer.innerHTML = htmlCards;
+                lastMessage.appendChild(cardsContainer);
+                attachFeedbackListeners(cardsContainer);
+            }
+        }
+        chatContainer.scrollTop = chatContainer.scrollHeight;
+    }
+
+    // --- Helper Functions ---
+    function attachFeedbackListeners(container) {
+        container.querySelectorAll('.feedback-btn').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                const button = e.currentTarget;
+                sendFeedback(button.dataset.id, button.dataset.feedback, button);
+            });
+        });
+    }
+
     function setButtonLoadingState(button, isLoading) {
         if (!button) return;
+        const buttonId = button.id || 'submit-btn-' + Math.random();
+
         if (isLoading) {
+            buttonOriginalContent[buttonId] = button.innerHTML;
             button.disabled = true;
-            button.innerHTML = `<span class="spinner"></span> Finding...`;
+            button.innerHTML = `<span class="spinner"></span>`;
+            if (button.form?.id === 'text-recommendation-form') {
+                textQueryInput.disabled = true;
+                textQueryInput.placeholder = "CineBot is thinking...";
+            }
         } else {
             button.disabled = false;
-            button.innerHTML = button.form.id.includes('text') ? 'Find Movies' : 'Find Similar Movies';
+            button.innerHTML = buttonOriginalContent[buttonId] || 'Submit';
+            if (button.form?.id === 'text-recommendation-form') {
+                textQueryInput.disabled = false;
+                fetchAndAnimateSuggestion();
+            }
         }
     }
 
     async function sendFeedback(tmdb_id, feedback, btn) {
-        // Visually update button immediately for better UX
-        const parent = btn.parentElement;
-        parent.querySelectorAll('.feedback-btn').forEach(b => b.classList.remove('liked', 'disliked'));
-        btn.classList.add(feedback === 'like' ? 'liked' : 'disliked');
+        btn.classList.add('feedback-sent');
+        btn.disabled = true;
+        const sibling = btn.parentElement.querySelector(`.feedback-btn:not([data-feedback='${feedback}'])`);
+        if(sibling) sibling.disabled = true;
 
         try {
             await fetch('/api/feedback', {
@@ -135,87 +255,27 @@ document.addEventListener('DOMContentLoaded', () => {
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ tmdb_id, feedback })
             });
+            console.log(`Feedback sent: ${tmdb_id} - ${feedback}`);
         } catch (error) {
-            console.error("Failed to send feedback:", error);
-            // Optionally revert the button style on failure
-            btn.classList.remove('liked', 'disliked');
+            console.error('Failed to send feedback:', error);
+            btn.classList.remove('feedback-sent');
+            btn.disabled = false;
+            if(sibling) sibling.disabled = false;
         }
     }
-
-    function displayRecommendations(recs) {
-        if (!recs || recs.length === 0) {
-            showError("CineBot couldn't find any matches. Please try a different query!");
-            return;
-        }
-        recs.forEach((rec, index) => {
-            const card = document.createElement('div');
-            card.className = 'movie-card';
-            card.style.animationDelay = `${index * 100}ms`; // Staggered animation
-            
-            const posterUrl = rec.poster_url || 'https://via.placeholder.com/400x600.png?text=No+Poster';
-            const trailerLink = rec.trailer_url ? `<a href="${rec.trailer_url}" target="_blank">Trailer</a>` : '';
-            const detailsLink = rec.tmdb_id ? `<a href="https://www.themoviedb.org/movie/${rec.tmdb_id}" target="_blank">Details</a>` : '';
-
-            card.innerHTML = `
-                <div class="card-feedback">
-                    <button class="feedback-btn" data-feedback="like" data-id="${rec.tmdb_id}" title="Good rec!"><svg viewBox="0 0 24 24"><path fill="currentColor" d="M23,10C23,8.89 22.1,8 21,8H14.68L15.64,3.43C15.66,3.33 15.67,3.22 15.67,3.11C15.67,2.7 15.5,2.32 15.23,2.05L14.17,1L7.59,7.58C7.22,7.95 7,8.45 7,9V19A2,2 0 0,0 9,21H18C18.83,21 19.54,20.5 19.84,19.78L22.86,12.73C22.95,12.5 23,12.26 23,12V10Z"></path></svg></button>
-                    <button class="feedback-btn" data-feedback="dislike" data-id="${rec.tmdb_id}" title="Not what I wanted"><svg viewBox="0 0 24 24"><path fill="currentColor" d="M19,15H21A2,2 0 0,1 23,17V19A2,2 0 0,1 21,21H12.2C11.66,21 11.14,20.76 10.84,20.34L7.82,13.29C7.73,13.06 7.67,12.81 7.67,12.55V10.5A1.5,1.5 0 0,1 9.17,9L10.23,2.95C10.5,2.68 10.86,2.5 11.28,2.5C11.67,2.5 12.04,2.66 12.31,2.92L13.37,4L12.41,8.57C12.38,8.67 12.37,8.78 12.37,8.89V15H19M1,15H5V3H1V15Z"></path></svg></button>
-                </div>
-                <img src="${posterUrl}" alt="Poster for ${rec.title}" class="poster-img">
-                <div class="card-content">
-                    <h4>${rec.title || 'Recommendation'}</h4>
-                    <div class="card-explanation"><p><i>CineBot says:</i> ${rec.explanation || '...'}</p></div>
-                    <div class="card-actions">${trailerLink}${detailsLink}</div>
-                </div>`;
-
-            card.querySelectorAll('.feedback-btn').forEach(btn => {
-                btn.addEventListener('click', (e) => {
-                    e.stopPropagation(); // Prevent card hover effects
-                    sendFeedback(btn.dataset.id, btn.dataset.feedback, btn);
-                });
-            });
-            resultsContainer.appendChild(card);
-        });
+    
+    function showSkeletonsInImageTab(count) {
+        imageResultsContainer.innerHTML = Array(count).fill('<div class="skeleton-card"></div>').join('');
     }
 
-    // --- UI State Management ---
-    function clearAllAndShowSkeletons() {
-        statusContainer.innerHTML = '';
-        resultsContainer.innerHTML = '';
-        const count = parseInt(colsSlider.value);
-        for (let i = 0; i < count; i++) {
-            const skeleton = document.createElement('div');
-            skeleton.className = 'skeleton-card';
-            resultsContainer.appendChild(skeleton);
-        }
-    }
-
-    function clearAllAndShowEmptyState() {
-        statusContainer.innerHTML = '';
-        resultsContainer.innerHTML = `<div class="empty-state">...</div>`; // simplified
-    }
-
-    function showError(message, showTryAgain = false) {
-        resultsContainer.innerHTML = '';
-        let tryAgainBtnHTML = '';
-        if (showTryAgain && lastRequest.endpoint) {
-            tryAgainBtnHTML = `<button class="try-again-btn">Try Again</button>`;
-        }
-        statusContainer.innerHTML = `<div class="error-message"><strong>Oops!</strong> ${message}${tryAgainBtnHTML}</div>`;
-
-        if (showTryAgain && lastRequest.endpoint) {
-            document.querySelector('.try-again-btn').addEventListener('click', () => {
-                const formId = lastRequest.endpoint.includes('text') ? 'text-recommendation-form' : 'image-recommendation-form';
-                const submitBtn = document.querySelector(`#${formId} .submit-btn`);
-                fetchRecommendations(lastRequest.endpoint, lastRequest.body, submitBtn);
-            });
-        }
+    function showErrorInImageTab(message) {
+        imageResultsContainer.innerHTML = `<div class="error-message">${message}</div>`;
     }
 
     // --- Initial Setup ---
     function initialize() {
-        resultsContainer.style.gridTemplateColumns = `repeat(${colsSlider.value}, 1fr)`;
-        clearAllAndShowEmptyState();
+        imageResultsContainer.style.setProperty('--grid-cols', colsSlider.value);
+        addMessageToChat("assistant", "Hello! I'm CineBot. Ask me for a movie based on a description, theme, or even a similar poster!");
         fetchAndAnimateSuggestion();
     }
 
