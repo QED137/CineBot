@@ -13,3 +13,4 @@ langchain-openai
 transformers
 torch
 Pillow
+gunicorn

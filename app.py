@@ -438,7 +438,7 @@ def handle_chat():
 #     app.run(debug=True, port=5001)
 
 if __name__ == '__main__':
-    port = int(os.environ.get("PORT", 10000))  # 10000 = local dev fallback
+    port = int(os.environ.get("PORT", 5001))  # 10000 = local dev fallback
     app.run(debug=True, host='0.0.0.0', port=port)
     
     

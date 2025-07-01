@@ -549,3 +549,9 @@ input[type="file"] {
     0%   { transform: translateX(100%); }
     100% { transform: translateX(-100%); }
 }
+.logo-container img {
+    width: auto;
+    height: 250px;
+    display: block;
+    margin: 0 auto;
+}
