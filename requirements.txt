@@ -1,16 +1,32 @@
-# Flask & environment
+# # Flask & environment
+# flask
+# python-dotenv
+
+# # --- LangChain & Integrations ---
+# # Let pip resolve the exact sub-dependency versions to ensure compatibility.
+# langchain
+# langchain-neo4j
+# langchain-openai
+
+# # --- Vector & ML dependencies ---
+# # We also leave these unpinned unless a specific problem arises.
+# transformers
+# torch
+# Pillow
+# gunicorn
+
+# --- Flask & Environment ---
 flask
 python-dotenv
+gunicorn
 
 # --- LangChain & Integrations ---
-# Let pip resolve the exact sub-dependency versions to ensure compatibility.
 langchain
 langchain-neo4j
 langchain-openai
+langchain-community>=0.0.24  # ✅ Required for GraphCypherQAChain
 
 # --- Vector & ML dependencies ---
-# We also leave these unpinned unless a specific problem arises.
 transformers
 torch
 Pillow
-gunicorn
