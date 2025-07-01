@@ -587,17 +587,28 @@ input[type="file"] {
     outline: none;
     box-shadow: 0 0 0 2px rgba(249, 203, 40, 0.5);
 }
-.notice-board {
-    background: linear-gradient(135deg, #ffe082, #ffca28);
-    clip-path: polygon(0 0, 100% 0, 95% 100%, 5% 100%);
-    padding: 16px 20px;
-    margin: 20px;
-    border: 2px solid #f57f17;
-    color: #333;
-    font-family: 'Segoe UI', sans-serif;
-    box-shadow: 0 4px 10px rgba(0,0,0,0.2);
-    max-width: 300px;
+
+.flag-wrapper {
+  perspective: 1000px;
+  display: inline-block;
 }
+
+.notice-board {
+  background: linear-gradient(135deg, #ffe082, #ffca28);
+  clip-path: polygon(0 0, 100% 0, 95% 100%, 5% 100%);
+  padding: 16px 20px;
+  margin: 20px;
+  border: 2px solid #f57f17;
+  color: #333;
+  font-family: 'Segoe UI', sans-serif;
+  box-shadow: 0 4px 10px rgba(0,0,0,0.2);
+  max-width: 300px;
+  animation: flag-wave 3s ease-in-out infinite;
+  transform-origin: top center;
+  transform-style: preserve-3d;
+  backface-visibility: hidden;
+}
+
 
 .notice-board h3 {
     margin-top: 0;
@@ -613,5 +624,26 @@ input[type="file"] {
 
 .notice-board a:hover {
     color: #880e4f;
+}
+.notice-board p {
+    margin: 8px 0;
+    line-height: 1.4;
+    color: #000;
+}
+.notice-board ul {
+    padding-left: 20px;
+    margin: 8px 0;
+}
+
+.notice-board:hover {
+    transform: translateY(0);
+}
+@keyframes flag-wave {
+  0%   { transform: rotateX(0deg); }
+  20%  { transform: rotateX(6deg); }
+  40%  { transform: rotateX(-6deg); }
+  60%  { transform: rotateX(4deg); }
+  80%  { transform: rotateX(-3deg); }
+  100% { transform: rotateX(0deg); }
 }
 
