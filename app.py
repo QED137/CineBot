@@ -318,55 +318,116 @@ def handle_feedback():
 
 
 # --- NEW: UNIFIED CHAT ENDPOINT ---
+# @app.route('/api/chat', methods=['POST'])
+# def handle_chat():
+#     try:
+#         # Get chat history from server-side session
+#         chat_history = session.get('chat_history', [])
+
+#         # Get form data
+#         user_query = request.form.get('query')
+#         image_file = request.files.get('poster')
+#         image_bytes = image_file.read() if image_file else None
+
+#         # Add user's message to history
+#         # We handle the display on the frontend, but log the user message here
+#         if user_query:
+#             chat_history.append({"role": "user", "content": user_query})
+#         elif image_bytes:
+#              chat_history.append({"role": "user", "content": "(Uploaded a poster)"})
+#         else:
+#             return jsonify({"error": "No query or image provided."}), 400
+
+#         # --- THIS IS THE CORE CHANGE ---
+#         # Call the single, unified process_query function
+#         bot_response_text, context_movies = process_query(
+#             user_query=user_query,
+#             image_bytes=image_bytes,
+#             chat_history=chat_history
+#         )
+#         # --------------------------------
+
+#         # Add bot's response to history, including the crucial context for follow-ups
+#         bot_message = {
+#             "role": "assistant",
+#             "content": bot_response_text,
+#             "context": context_movies  # <-- This is the key for stateful conversation
+#         }
+#         chat_history.append(bot_message)
+
+#         # Save the updated history back to the session
+#         session['chat_history'] = chat_history
+
+#         # Process the response to generate HTML cards for the frontend
+#         parsed_recs = parse_llm_recommendations(bot_response_text)
+#         detailed_recs = map_llm_recs_to_retrieved_details(parsed_recs, context_movies)
+#         html_cards = "".join([render_movie_card_html(rec, i) for i, rec in enumerate(detailed_recs)])
+
+#         # The raw text is sent for the chat bubble, the HTML is for the cards
+#         return jsonify({
+#             "llm_response_text": bot_response_text,
+#             "html_cards": html_cards
+#         })
+
+#     except Exception as e:
+#         logger.error(f"Error in chat API: {e}", exc_info=True)
+#         return jsonify({"error": "An internal error occurred. Please try again."}), 500
 @app.route('/api/chat', methods=['POST'])
 def handle_chat():
+    import json
     try:
-        # Get chat history from server-side session
-        chat_history = session.get('chat_history', [])
+        # Try to get chat history from the request (preferred) or fallback to session
+        history_json = request.form.get('chat_history')
+        if history_json:
+            chat_history = json.loads(history_json)
+        else:
+            chat_history = session.get('chat_history', [])
 
-        # Get form data
+        # Extract user input
         user_query = request.form.get('query')
         image_file = request.files.get('poster')
         image_bytes = image_file.read() if image_file else None
 
-        # Add user's message to history
-        # We handle the display on the frontend, but log the user message here
+        # Add user message to chat history
         if user_query:
             chat_history.append({"role": "user", "content": user_query})
         elif image_bytes:
-             chat_history.append({"role": "user", "content": "(Uploaded a poster)"})
+            chat_history.append({"role": "user", "content": "(Uploaded a poster)"})
         else:
             return jsonify({"error": "No query or image provided."}), 400
 
-        # --- THIS IS THE CORE CHANGE ---
-        # Call the single, unified process_query function
+        # 🔁 Core processing
         bot_response_text, context_movies = process_query(
             user_query=user_query,
             image_bytes=image_bytes,
             chat_history=chat_history
         )
-        # --------------------------------
 
-        # Add bot's response to history, including the crucial context for follow-ups
+        # Add assistant message with context
         bot_message = {
             "role": "assistant",
             "content": bot_response_text,
-            "context": context_movies  # <-- This is the key for stateful conversation
+            "context": context_movies  # ✅ for follow-up queries
         }
         chat_history.append(bot_message)
 
-        # Save the updated history back to the session
+        # Save updated history (optional if using client-side storage)
         session['chat_history'] = chat_history
+        print("🧠 chat_history received:")
+        for msg in chat_history:
+            print(f"{msg['role']}: {msg['content'][:60]}")
+            if msg["role"] == "assistant" and "context" in msg:
+               print("  ↳ context: ✅ present")
 
-        # Process the response to generate HTML cards for the frontend
+        # Format response for frontend
         parsed_recs = parse_llm_recommendations(bot_response_text)
         detailed_recs = map_llm_recs_to_retrieved_details(parsed_recs, context_movies)
         html_cards = "".join([render_movie_card_html(rec, i) for i, rec in enumerate(detailed_recs)])
-
-        # The raw text is sent for the chat bubble, the HTML is for the cards
+        
         return jsonify({
             "llm_response_text": bot_response_text,
-            "html_cards": html_cards
+            "html_cards": html_cards,
+            "context_movies": context_movies  # 👈 return this so JS can store it
         })
 
     except Exception as e:
@@ -375,3 +436,4 @@ def handle_chat():
 
 if __name__ == '__main__':
     app.run(debug=True, port=5001)
+    

@@ -1,4 +1,4 @@
-/* static/css/style.css - REWRITTEN FOR A DASHBOARD UI */
+/* static/css/style.css - CORRECTED */
 
 /* ========================================= */
 /*  1. ROOT VARIABLES & GLOBAL RESETS        */
@@ -405,6 +405,10 @@ p {
     cursor: pointer;
     transition: transform 0.2s, box-shadow 0.2s;
     font-size: 1rem;
+    /* Added to center the spinner */
+    display: flex;
+    align-items: center;
+    justify-content: center;
 }
 
 .submit-btn:hover {
@@ -419,11 +423,12 @@ p {
     box-shadow: none;
 }
 
+/* THIS IS THE CORRECT, WORKING SPINNER STYLE */
 .spinner {
     display: inline-block;
-    width: 1.2em;
-    height: 1.2em;
-    border: 0.2em solid currentColor;
+    width: 1.5em; /* Increased size slightly for better visibility */
+    height: 1.5em;
+    border: 0.2em solid rgba(255, 255, 255, 0.7);
     border-right-color: transparent;
     border-radius: 50%;
     animation: spinner-border .75s linear infinite;
@@ -508,81 +513,39 @@ input[type="file"] {
         grid-template-columns: repeat(var(--grid-cols, 2), 1fr);
     }
 }
-.icon-wrapper {
-  display: inline-block;
-  width: 24px;
-  height: 24px;
-  position: relative;
+
+/* --- ALL THE CONFLICTING CSS BELOW THIS LINE HAS BEEN REMOVED --- */
+
+.marquee-container {
+    height: 42px;
+    overflow: hidden;
+    position: relative;
+    background: rgba(15, 12, 41, 0.8);
+    border-radius: 10px;
+    border: 1px solid rgba(249, 203, 40, 0.3);
+    box-shadow: 0 0 12px rgba(249, 203, 40, 0.1);
+    backdrop-filter: blur(6px);
+    padding-left: 10px;
+    margin-bottom: 1.5rem;
 }
 
-.arrow-icon,
-.spinner {
-  position: absolute;
-  top: 0; left: 0;
-  width: 100%;
-  height: 100%;
-  transition: opacity 0.3s ease, transform 0.3s ease;
+.marquee-text {
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    margin: 0;
+    line-height: 42px;
+    font-size: 15px;
+    font-family: 'Segoe UI', sans-serif;
+    font-weight: 500;
+    background: linear-gradient(90deg, #f9cb28, #ff9d00, #f9cb28);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    text-shadow: 0 0 8px rgba(249, 203, 40, 0.3);
+    animation: scrollLeft 20s linear infinite;
 }
 
-.arrow-icon {
-  opacity: 1;
-  transform: scale(1);
+@keyframes scrollLeft {
+    0%   { transform: translateX(100%); }
+    100% { transform: translateX(-100%); }
 }
-
-.spinner {
-  opacity: 0;
-  transform: scale(0);
-  border: 2px solid currentColor;
-  border-top-color: transparent;
-  border-radius: 50%;
-  animation: spinner-rotate 0.75s linear infinite;
-}
-
-.icon-wrapper.loading .arrow-icon,
-.icon-wrapper.loading .text-label {
-  opacity: 0;
-  transform: scale(0);
-}
-
-.icon-wrapper.loading .spinner {
-  opacity: 1;
-  transform: scale(1);
-}
-
-@keyframes spinner-rotate {
-  to { transform: rotate(360deg); }
-}
-
-    .marquee-container {
-        height: 42px;
-        overflow: hidden;
-        position: relative;
-        background: rgba(15, 12, 41, 0.8);
-        border-radius: 10px;
-        border: 1px solid rgba(249, 203, 40, 0.3);
-        box-shadow: 0 0 12px rgba(249, 203, 40, 0.1);
-        backdrop-filter: blur(6px);
-        padding-left: 10px;
-        margin-bottom: 1.5rem;
-    }
-
-    .marquee-text {
-        position: absolute;
-        width: 100%;
-        height: 100%;
-        margin: 0;
-        line-height: 42px;
-        font-size: 15px;
-        font-family: 'Segoe UI', sans-serif;
-        font-weight: 500;
-        background: linear-gradient(90deg, #f9cb28, #ff9d00, #f9cb28);
-        -webkit-background-clip: text;
-        -webkit-text-fill-color: transparent;
-        text-shadow: 0 0 8px rgba(249, 203, 40, 0.3);
-        animation: scrollLeft 20s linear infinite;
-    }
-
-    @keyframes scrollLeft {
-        0%   { transform: translateX(100%); }
-        100% { transform: translateX(-100%); }
-    }

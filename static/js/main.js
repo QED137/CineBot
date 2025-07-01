@@ -10,6 +10,8 @@ document.addEventListener('DOMContentLoaded', () => {
     const chatContainer = document.getElementById('chat-container');
     const imageResultsContainer = document.getElementById('image-results-container');
     const inspireBtn = document.getElementById('inspire-btn');
+    const chatHistory = [];  // 🧠 New global variable
+    const chatHistoryLimit = 100; // Limit to the last 100 messages
 
     let isTyping = false;
     const buttonOriginalContent = {};
@@ -91,6 +93,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         const formData = new FormData();
         formData.append('query', query);
+        formData.append('chat_history', JSON.stringify(chatHistory));  // ✅ send full history
 
         textQueryInput.value = '';
         textQueryInput.style.height = 'auto';
@@ -106,7 +109,7 @@ document.addEventListener('DOMContentLoaded', () => {
             if (!response.ok) {
                 throw new Error(data.error || `Server responded with status ${response.status}`);
             }
-            
+            window.lastContextMovies = data.context_movies || [];
             updateLastAssistantMessage(data.llm_response_text, data.html_cards);
 
         } catch (error) {
@@ -151,52 +154,65 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     
     // --- Chat UI Display Functions (Unchanged) ---
-    function addMessageToChat(role, text, isLoading = false) {
-        const messageDiv = document.createElement('div');
-        messageDiv.className = `chat-message ${role}`;
-        
-        if (isLoading) {
-            messageDiv.innerHTML = `<div class="typing-indicator"><span></span><span></span><span></span></div>`;
-        } else {
-            const contentDiv = document.createElement('div');
-            contentDiv.className = 'chat-text-content';
-            contentDiv.textContent = text;
-            messageDiv.appendChild(contentDiv);
-        }
-        
-        chatContainer.appendChild(messageDiv);
-        chatContainer.scrollTop = chatContainer.scrollHeight;
+   function addMessageToChat(role, text, isLoading = false) {
+    const messageDiv = document.createElement('div');
+    messageDiv.className = `chat-message ${role}`;
+
+    if (!isLoading) {
+        chatHistory.push({ role, content: text });  // ✅ Save to chat history
     }
+
+    if (isLoading) {
+        messageDiv.innerHTML = `<div class="typing-indicator"><span></span><span></span><span></span></div>`;
+    } else {
+        const contentDiv = document.createElement('div');
+        contentDiv.className = 'chat-text-content';
+        contentDiv.textContent = text;
+        messageDiv.appendChild(contentDiv);
+    }
+
+    chatContainer.appendChild(messageDiv);
+    chatContainer.scrollTop = chatContainer.scrollHeight;
+}
 
     function updateLastAssistantMessage(text, htmlCards, isError = false) {
-        const lastMessage = chatContainer.querySelector('.chat-message.assistant:last-child');
-        if (!lastMessage) return;
-        
-        lastMessage.innerHTML = '';
-            
-        if (isError) {
-            lastMessage.innerHTML = `<p class="error-message">${text}</p>`;
-        } else {
-            const conversationalText = text.replace(/MOVIE:.*?\nEXPLANATION:/gs, '').replace(/MOVIE:.*$/gs, '').trim();
-            const textContentDiv = document.createElement('div');
-            textContentDiv.className = 'chat-text-content';
-            textContentDiv.textContent = conversationalText || text;
-            lastMessage.appendChild(textContentDiv);
+    const lastMessage = chatContainer.querySelector('.chat-message.assistant:last-child');
+    if (!lastMessage) return;
 
-            if (htmlCards) {
-                const cardsContainer = document.createElement('div');
-                cardsContainer.className = 'chat-results-container';
-                cardsContainer.innerHTML = htmlCards;
-                lastMessage.appendChild(cardsContainer);
-            }
+    lastMessage.innerHTML = '';
+
+    if (isError) {
+        lastMessage.innerHTML = `<p class="error-message">${text}</p>`;
+    } else {
+        const conversationalText = text.replace(/MOVIE:.*?\nEXPLANATION:/gs, '').replace(/MOVIE:.*$/gs, '').trim();
+        const textContentDiv = document.createElement('div');
+        textContentDiv.className = 'chat-text-content';
+        textContentDiv.textContent = conversationalText || text;
+        lastMessage.appendChild(textContentDiv);
+
+        if (htmlCards) {
+            const cardsContainer = document.createElement('div');
+            cardsContainer.className = 'chat-results-container';
+            cardsContainer.innerHTML = htmlCards;
+            lastMessage.appendChild(cardsContainer);
         }
-        chatContainer.scrollTop = chatContainer.scrollHeight;
+
+        // ✅ Add assistant message to chatHistory with context
+        chatHistory.push({
+            role: 'assistant',
+            content: text,
+            context: window.lastContextMovies || []
+        });
     }
+
+    chatContainer.scrollTop = chatContainer.scrollHeight;
+}
 
     // --- Helper Functions (Unchanged) ---
     function setButtonLoadingState(button, isLoading) {
         if (!button) return;
-        const buttonId = button.id || 'submit-btn-' + Math.random();
+        //const buttonId = button.id || 'submit-btn-' + Math.random();
+        const buttonId = button.id;
 
         if (isLoading) {
             buttonOriginalContent[buttonId] = button.innerHTML;
