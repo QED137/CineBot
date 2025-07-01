@@ -14,6 +14,7 @@ from transformers import CLIPProcessor, CLIPModel
 # --- NEW: Import LangChain components for Text-to-Cypher ---
 from langchain_openai import ChatOpenAI
 from langchain.chains import GraphCypherQAChain
+
 # ---
 
 from langchain_neo4j import Neo4jGraph
@@ -80,25 +81,15 @@ def get_text_embedding_openai(text_to_embed: str) -> Optional[List[float]]:
         return None
 
 def get_query_image_embedding(image_bytes: bytes) -> Optional[List[float]]:
-    """Send image to local Flask embedding server."""
-    import base64
-    import requests
-
-    if not image_bytes:
-        return None
-
+    """Compute CLIP embedding from raw image bytes without external API calls."""
     try:
-        image_b64 = base64.b64encode(image_bytes).decode("utf-8")
-        response = requests.post(
-            "http://localhost:5001/embed-image",  # 👈 Replace with your actual Flask URL
-            json={"image_base64": image_b64},
-            timeout=10
-        )
-        response.raise_for_status()
-        data = response.json()
-        return data.get("embedding")
+        image = Image.open(io.BytesIO(image_bytes)).convert("RGB")
+        inputs = clip_processor(images=image, return_tensors="pt")
+        with torch.no_grad():
+            image_features = clip_model.get_image_features(**inputs)
+        return image_features.squeeze().tolist()
     except Exception as e:
-        logger.error(f"Failed to get image embedding via Flask API: {e}", exc_info=True)
+        logger.error(f"Failed to compute image embedding locally: {e}", exc_info=True)
         return None
 
 
