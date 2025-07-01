@@ -1,21 +1,15 @@
-# requirements.txt
-
-# --- Top-level libraries my app uses ---
+# Flask & environment
 flask
 python-dotenv
-gunicorn
-requests
+
+# --- LangChain & Integrations ---
+# Let pip resolve the exact sub-dependency versions to ensure compatibility.
+langchain
 langchain-neo4j
-huggingface-hub==0.33.1   # Keeping this pin is ok if you need it, but you could loosen it.
-neo4j-graphrag==1.7.0   # This pin is fine.
+langchain-openai
+
+# --- Vector & ML dependencies ---
+# We also leave these unpinned unless a specific problem arises.
 transformers
-openai
 torch
 Pillow
-# ... other direct dependencies
-
-# --- Development libraries ---
-pytest
-
-# NOTICE: fsspec, pyyaml, typing-extensions, etc. are NOT listed here.
-# Pip will install the correct versions of them based on the needs of the libraries above.
