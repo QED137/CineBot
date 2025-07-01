@@ -434,6 +434,11 @@ def handle_chat():
         logger.error(f"Error in chat API: {e}", exc_info=True)
         return jsonify({"error": "An internal error occurred. Please try again."}), 500
 
+# if __name__ == '__main__':
+#     app.run(debug=True, port=5001)
+
 if __name__ == '__main__':
-    app.run(debug=True, port=5001)
+    port = int(os.environ.get("PORT", 10000))  # 10000 = local dev fallback
+    app.run(debug=True, host='0.0.0.0', port=port)
+    
     

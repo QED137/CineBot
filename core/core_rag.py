@@ -80,17 +80,27 @@ def get_text_embedding_openai(text_to_embed: str) -> Optional[List[float]]:
         return None
 
 def get_query_image_embedding(image_bytes: bytes) -> Optional[List[float]]:
-    if not clip_model or not clip_processor or not image_bytes: return None
-    try:
-        image = Image.open(io.BytesIO(image_bytes)).convert("RGB")
-        inputs = clip_processor(images=image, return_tensors="pt").to(DEVICE)
-        with torch.no_grad():
-            image_features = clip_model.get_image_features(**inputs)
-            image_features /= image_features.norm(p=2, dim=-1, keepdim=True)
-        return image_features[0].cpu().tolist()
-    except Exception as e:
-        logger.error(f"Error generating embedding for query image: {e}", exc_info=True)
+    """Send image to local Flask embedding server."""
+    import base64
+    import requests
+
+    if not image_bytes:
         return None
+
+    try:
+        image_b64 = base64.b64encode(image_bytes).decode("utf-8")
+        response = requests.post(
+            "http://localhost:5001/embed-image",  # 👈 Replace with your actual Flask URL
+            json={"image_base64": image_b64},
+            timeout=10
+        )
+        response.raise_for_status()
+        data = response.json()
+        return data.get("embedding")
+    except Exception as e:
+        logger.error(f"Failed to get image embedding via Flask API: {e}", exc_info=True)
+        return None
+
 
 # --- Retrieval Functions (same) ---
 def retrieve_movies_by_text_similarity(query_text: str, top_k: int = 5) -> List[Dict]:
