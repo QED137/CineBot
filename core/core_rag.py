@@ -228,7 +228,31 @@ def handle_vector_search(user_query: str, chat_history: List[Dict], top_k: int =
     """Handles semantic search using vector similarity."""
     logger.info("Handling query with VECTOR SEARCH")
     retrieved_movies = retrieve_movies_by_text_similarity(user_query, top_k=top_k)
+    # Fallback: If no results, try keyword-based Cypher search for genre
     if not retrieved_movies:
+        logger.info("No vector search results, attempting keyword fallback.")
+        # Extract possible genre/keyword from query (simple heuristic)
+        import re
+        genre_match = re.search(r'(war|romantic|comedy|action|drama|thriller|horror|sci[- ]?fi|adventure|animation|crime|fantasy|family|history|music|mystery|western|documentary)', user_query, re.I)
+        genre = genre_match.group(1) if genre_match else None
+        if genre:
+            cypher = f"""
+            MATCH (m:Movie)
+            WHERE toLower(m.title) CONTAINS '{genre.lower()}' OR toLower(m.tagline) CONTAINS '{genre.lower()}' OR toLower(m.overview) CONTAINS '{genre.lower()}'
+            RETURN m.tmdb_id AS tmdb_id, m.title AS title, m.tagline AS tagline, m.overview AS overview, m.poster_url AS poster_url, m.trailer_url AS trailer_url
+            LIMIT 7
+            """
+            try:
+                fallback_movies = kg.query(cypher) or []
+                if fallback_movies:
+                    movie_context = format_movies_for_llm_prompt(fallback_movies)
+                    history_context = format_chat_history_for_llm(chat_history)
+                    system_message = "You are CineBot, a movie recommender. Select the best movies from the context provided and explain why in 1-2 sentences. Format your response exactly as: MOVIE: [Title]\nEXPLANATION: [Your text]"
+                    prompt = f"""{history_context}\nBased on the user's request for '{html.escape(user_query)}', I have found the following movies:\nCONTEXT:\n{movie_context}\n\nTASK: Select the {num_rec} best movies from the CONTEXT. For EACH, respond in the required format.\n"""
+                    llm_response = get_llm_response(prompt, system_message)
+                    return llm_response, fallback_movies
+            except Exception as e:
+                logger.error(f"Keyword fallback Cypher query failed: {e}")
         return "I couldn't find any movies matching that description. Could you try rephrasing?", []
 
     movie_context = format_movies_for_llm_prompt(retrieved_movies)
@@ -349,6 +373,32 @@ def handle_follow_up(user_query: str, chat_history: List[Dict]) -> Tuple[str, Li
         logger.info("No movie context or invalid context found. Rerouting to graph_search.")
         return handle_graph_search(user_query, chat_history)
 
+    # --- Pronoun resolution for follow-up questions ---
+    resolved_query = user_query
+    pronoun_patterns = [
+        (r"\bthis\b", 0),
+        (r"the first one", 0),
+        (r"the second one", 1),
+        (r"the third one", 2),
+        (r"the last one", -1)
+    ]
+    for pattern, idx in pronoun_patterns:
+        import re
+        if re.search(pattern, user_query, re.I):
+            # Pick the correct movie title
+            try:
+                if idx == -1:
+                    movie = previous_context_movies[-1]
+                else:
+                    movie = previous_context_movies[idx]
+                title = movie.get("title")
+                if title:
+                    resolved_query = re.sub(pattern, title, user_query, flags=re.I)
+                    logger.info(f"Resolved pronoun '{pattern}' to movie title '{title}' in follow-up query.")
+            except Exception as e:
+                logger.warning(f"Failed to resolve pronoun '{pattern}': {e}")
+            break
+
     # 🧠 Proceed with LLM-based follow-up on movie list
     movie_context = format_movies_for_llm_prompt(previous_context_movies)
     history_context = format_chat_history_for_llm(chat_history[:-1])
@@ -363,7 +413,7 @@ I previously recommended the following movies:
 CONTEXT:
 {movie_context}
 
-Now, the user has a follow-up question: "{html.escape(user_query)}"
+Now, the user has a follow-up question: \"{html.escape(resolved_query)}\"
 
 TASK: Answer the user's question based on the information in the CONTEXT. If you cannot answer from the context, say so.
 """
@@ -378,7 +428,7 @@ TASK: Answer the user's question based on the information in the CONTEXT. If you
         or "i'm sorry" in answer.lower()
     ):
         logger.info("LLM failed to answer follow-up. Fallback to graph search.")
-        return handle_graph_search(user_query, chat_history)
+        return handle_graph_search(resolved_query, chat_history)
 
     return answer, previous_context_movies
 
