@@ -30,3 +30,5 @@ langchain-community>=0.0.24  # ✅ Required for GraphCypherQAChain
 transformers
 torch
 Pillow
+
+openai
