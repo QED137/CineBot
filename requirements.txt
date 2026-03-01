@@ -17,6 +17,7 @@
 
 # --- Flask & Environment ---
 flask
+flask-cors
 python-dotenv
 gunicorn
 

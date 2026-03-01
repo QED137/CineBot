@@ -7,6 +7,7 @@ import html
 import json
 
 from flask import Flask, request, jsonify, render_template, session
+from flask_cors import CORS
 from werkzeug.utils import secure_filename
 from dotenv import load_dotenv
 from flask_session import Session
@@ -25,12 +26,22 @@ app.config["MAX_CONTENT_LENGTH"] = 16 * 1024 * 1024  # 16 MB upload limit
 # Secret key for signing sessions (comes from /opt/cinebot/.env)
 app.config["SECRET_KEY"] = os.getenv("FLASK_SECRET_KEY", "INSECURE-DEV-SECRET")
 
+# --- CORS Configuration for React Frontend ---
+CORS(app, resources={
+    r"/api/*": {
+        "origins": ["http://localhost:3000", "http://localhost:5173"],
+        "methods": ["GET", "POST", "OPTIONS"],
+        "allow_headers": ["Content-Type"],
+        "supports_credentials": True
+    }
+})
+
 # --- Server-side session config (Flask-Session) ---
 app.config["SESSION_TYPE"] = "filesystem"
 app.config["SESSION_FILE_DIR"] = "/opt/cinebot/flask_session"
 app.config["SESSION_PERMANENT"] = False
 app.config["SESSION_COOKIE_HTTPONLY"] = True
-app.config["SESSION_COOKIE_SECURE"] = True   # you're using HTTPS
+app.config["SESSION_COOKIE_SECURE"] = False  # Set to True only when using HTTPS in production
 app.config["SESSION_COOKIE_SAMESITE"] = "Lax"
 
 Session(app)
