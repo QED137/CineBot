@@ -2,7 +2,7 @@
 import os
 from dotenv import load_dotenv
 # --- Database ---
-load_dotenv()
+load_dotenv(override=True)  # Force override environment variables with .env file
 NEO4J_URI = os.getenv("NEO4J_URI")
 NEO4J_USERNAME = os.getenv("NEO4J_USERNAME")
 NEO4J_PASSWORD = os.getenv("NEO4J_PASSWORD")

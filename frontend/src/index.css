@@ -40,6 +40,10 @@ body {
   animation: fadeIn 0.3s ease-in;
 }
 
+.animate-fadeIn {
+  animation: fadeIn 0.4s ease-out;
+}
+
 @keyframes fadeIn {
   from {
     opacity: 0;
@@ -51,11 +55,26 @@ body {
   }
 }
 
-.slide-in {
-  animation: slideIn 0.4s ease-out;
+.animate-slideIn {
+  animation: slideIn 0.3s ease-out;
 }
 
 @keyframes slideIn {
+  from {
+    opacity: 0;
+    transform: translateX(100px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+.slide-in {
+  animation: slideInLeft 0.4s ease-out;
+}
+
+@keyframes slideInLeft {
   from {
     opacity: 0;
     transform: translateX(-20px);
@@ -64,4 +83,10 @@ body {
     opacity: 1;
     transform: translateX(0);
   }
+}
+
+/* Smooth focus visible styles */
+*:focus-visible {
+  outline: 2px solid #3b82f6;
+  outline-offset: 2px;
 }

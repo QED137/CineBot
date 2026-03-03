@@ -172,9 +172,9 @@ NEO4J_PASSWORD = settings.NEO4J_PASSWORD
 OPENAI_API_KEY = settings.OPENAI_API_KEY
 OPENAI_ENDPOINT = settings.OPENAI_ENDPOINT
 TMDB_API_KEY = settings.TMDB_API_KEY
-OMDB_API = settings.OMDB_API
+OMDB_API = getattr(settings, 'OMDB_API_KEY', None) or getattr(settings, 'OMDB_API', None)
 BASE_URL = "https://api.themoviedb.org/3"
-OMDB_URL = f"http://www.omdbapi.com/?apikey={OMDB_API}&"
+OMDB_URL = f"http://www.omdbapi.com/?apikey={OMDB_API}&" if OMDB_API else ""
 
 # --- Load CLIP Model (Global) ---
 clip_model = CLIPModel.from_pretrained("openai/clip-vit-base-patch32")

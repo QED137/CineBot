@@ -24,10 +24,11 @@ export const chatAPI = {
     return response.data;
   },
 
-  // Send poster image
-  sendPosterImage: async (imageFile) => {
+  // Send poster image with chat history
+  sendPosterImage: async (imageFile, chatHistory = []) => {
     const formData = new FormData();
     formData.append('poster', imageFile);
+    formData.append('chat_history', JSON.stringify(chatHistory));
     
     const response = await api.post('/chat', formData, {
       headers: {

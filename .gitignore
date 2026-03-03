@@ -65,6 +65,7 @@ media/ # Usually specific to project media files
 # Flask stuff:
 instance/
 .webassets-cache
+flask_session/
 
 # Scrapy stuff:
 .scrapy
@@ -152,3 +153,19 @@ Thumbs.db
 node_modules/
 frontend/dist/
 frontend/.env
+
+# Test and debug files
+test_*.py
+*_test.py
+check_*.py
+quick_test.py
+
+# Backup files
+*.old
+*.backup
+*.bak
+
+# Documentation - keep only README.md
+*.md
+!README.md
+*.ipynb

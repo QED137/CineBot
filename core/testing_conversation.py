@@ -2,7 +2,7 @@
 import os 
 from config import settings
 from langchain_openai import OpenAI
-from langchain.prompts import PromptTemplate
+from langchain_core.prompts import PromptTemplate
 
 
 

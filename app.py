@@ -38,7 +38,7 @@ CORS(app, resources={
 
 # --- Server-side session config (Flask-Session) ---
 app.config["SESSION_TYPE"] = "filesystem"
-app.config["SESSION_FILE_DIR"] = "/opt/cinebot/flask_session"
+app.config["SESSION_FILE_DIR"] = os.path.join(os.path.dirname(__file__), "flask_session")
 app.config["SESSION_PERMANENT"] = False
 app.config["SESSION_COOKIE_HTTPONLY"] = True
 app.config["SESSION_COOKIE_SECURE"] = False  # Set to True only when using HTTPS in production
@@ -72,6 +72,11 @@ def parse_llm_recommendations(llm_text_response: str):
 
     Falls back to a single "CineBot's Thoughts" card if not structured.
     """
+    # Handle None or empty responses
+    if not llm_text_response:
+        logger.warning("LLM response is None or empty")
+        return [{"title": "CineBot", "explanation": "I couldn't generate a proper response. Please try again."}]
+    
     recommendations = []
     pattern = re.compile(
         r"MOVIE:\s*(.*?)\s*\n\s*EXPLANATION:\s*(.*?)(?=\n\nMOVIE:|\Z)",
@@ -109,6 +114,9 @@ def map_llm_recs_to_retrieved_details(llm_parsed_recs, retrieved_movies):
     """
     Map LLM-chosen titles back to the retrieved movie metadata (poster, trailer, etc.).
     """
+    if not llm_parsed_recs:
+        return []
+    
     if not retrieved_movies:
         return llm_parsed_recs
 
@@ -116,6 +124,7 @@ def map_llm_recs_to_retrieved_details(llm_parsed_recs, retrieved_movies):
     retrieved_lookup = {
         (movie.get("title") or "").lower().strip(): movie
         for movie in retrieved_movies
+        if movie.get("title")
     }
 
     for llm_rec in llm_parsed_recs:
@@ -224,20 +233,39 @@ def handle_chat():
     try:
         MAX_TURNS = 6  # how many last messages to keep in server-side history
 
-        # Prefer client-sent history (if you store it in JS), otherwise use session
-        history_json = request.form.get("chat_history")
-        if history_json:
-            try:
-                chat_history = json.loads(history_json)
-            except json.JSONDecodeError:
-                chat_history = []
+        # Check if request is JSON or form data
+        if request.is_json:
+            # Handle JSON requests from frontend
+            data = request.get_json()
+            user_query = data.get("message") or data.get("query")
+            image_bytes = None
+            
+            # Get chat history from JSON and clean it
+            raw_history = data.get("chat_history", [])
+            chat_history = []
+            for msg in raw_history:
+                # Only keep role and content, strip out context/movies
+                clean_msg = {
+                    "role": msg.get("role", "user"),
+                    "content": msg.get("content", "")
+                }
+                chat_history.append(clean_msg)
         else:
-            chat_history = session.get("chat_history", [])
+            # Handle form data (for poster uploads)
+            # Prefer client-sent history (if you store it in JS), otherwise use session
+            history_json = request.form.get("chat_history")
+            if history_json:
+                try:
+                    chat_history = json.loads(history_json)
+                except json.JSONDecodeError:
+                    chat_history = []
+            else:
+                chat_history = session.get("chat_history", [])
 
-        # Extract incoming data
-        user_query = request.form.get("query")
-        image_file = request.files.get("poster")
-        image_bytes = image_file.read() if image_file else None
+            # Extract incoming data
+            user_query = request.form.get("query")
+            image_file = request.files.get("poster")
+            image_bytes = image_file.read() if image_file else None
 
         # Basic validation: require either text or image
         if user_query:
@@ -245,14 +273,25 @@ def handle_chat():
         elif image_bytes:
             chat_history.append({"role": "user", "content": "(Uploaded a poster)"})
         else:
+            logger.error("No query or image provided in request")
             return jsonify({"error": "No query or image provided."}), 400
 
+        logger.info(f"Processing query: {user_query[:50] if user_query else 'poster upload'}")
+        
         # Core RAG processing
         bot_response_text, context_movies = process_query(
             user_query=user_query,
             image_bytes=image_bytes,
             chat_history=chat_history,
         )
+        
+        # Ensure we have a valid response
+        if not bot_response_text:
+            bot_response_text = "I'm having trouble processing your request. Please try rephrasing."
+            logger.warning("process_query returned None for bot_response_text")
+        
+        if context_movies is None:
+            context_movies = []
 
         # Add assistant message with full context (for the in-memory history / client)
         bot_message = {
@@ -262,16 +301,17 @@ def handle_chat():
         }
         chat_history.append(bot_message)
 
-        # --- Trim and store a LIGHT version of history in server-side session ---
+        # --- Trim and store history in server-side session (with context for last message) ---
         session_history = []
-        for msg in chat_history[-MAX_TURNS:]:
-            session_history.append(
-                {
-                    "role": msg.get("role"),
-                    # store only text content in session, truncated
-                    "content": (msg.get("content") or "")[:500],
-                }
-            )
+        for i, msg in enumerate(chat_history[-MAX_TURNS:]):
+            stored_msg = {
+                "role": msg.get("role"),
+                "content": (msg.get("content") or "")[:500],
+            }
+            # Store full context only for the last assistant message (for follow-ups)
+            if msg.get("role") == "assistant" and i == len(chat_history[-MAX_TURNS:]) - 1:
+                stored_msg["context"] = msg.get("context", [])
+            session_history.append(stored_msg)
 
         session["chat_history"] = session_history
         # -----------------------------------------------------------------------
@@ -290,18 +330,26 @@ def handle_chat():
 
         return jsonify(
             {
+                "response": bot_response_text,  # Match frontend expectation
                 "llm_response_text": bot_response_text,
                 "html_cards": html_cards,
-                "context_movies": context_movies,  # frontend can use this if needed
+                "movies": context_movies,  # Match frontend expectation
+                "context_movies": context_movies,
             }
         )
 
     except Exception as e:
         logger.error(f"Error in chat API: {e}", exc_info=True)
-        return jsonify({"error": "An internal error occurred. Please try again."}), 500
+        import traceback
+        error_details = traceback.format_exc()
+        print(f"\n❌ CHAT API ERROR:\n{error_details}\n")
+        return jsonify({
+            "error": f"An internal error occurred: {str(e)}",
+            "details": error_details if app.debug else None
+        }), 500
 
 
 if __name__ == "__main__":
     # For local debugging only; in production you use gunicorn
-    app.run(debug=True, port=8000)
+    app.run(debug=True, host='0.0.0.0', port=8000)
 
