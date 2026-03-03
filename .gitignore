@@ -165,6 +165,9 @@ quick_test.py
 *.backup
 *.bak
 
+# Scripts
+git_cleanup.sh
+
 # Documentation - keep only README.md
 *.md
 !README.md
