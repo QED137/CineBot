@@ -23,7 +23,11 @@ def get_driver() -> Driver:
         try:
             _driver = GraphDatabase.driver(
                 settings.NEO4J_URI,
-                auth=(settings.NEO4J_USERNAME, settings.NEO4J_PASSWORD)
+                auth=(settings.NEO4J_USERNAME, settings.NEO4J_PASSWORD),
+                connection_timeout=15,  # 15 second connection timeout
+                max_connection_lifetime=300,  # 5 minutes max connection lifetime
+                max_connection_pool_size=50,
+                connection_acquisition_timeout=30  # 30 second acquisition timeout
             )
             # Check connectivity
             _driver.verify_connectivity()

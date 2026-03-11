@@ -22,6 +22,7 @@ from config import settings
 from langchain_core.prompts import PromptTemplate
 from langchain_community.graphs import Neo4jGraph
 from utils.poster_filter import is_valid_movie_poster
+from core.redis_cache import get_genre_cache, get_vector_cache, get_graph_cache
 
 # --- Global Initializations (largely the same) ---
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
@@ -48,7 +49,8 @@ if hasattr(settings, 'NEO4J_URI'):
             url=settings.NEO4J_URI,
             username=settings.NEO4J_USERNAME,
             password=settings.NEO4J_PASSWORD,
-            database=getattr(settings, 'NEO4J_DATABASE', "neo4j")
+            database=getattr(settings, 'NEO4J_DATABASE', "neo4j"),
+            timeout=30  # Add 30 second timeout for queries
         )
         kg.refresh_schema() # Important for LangChain
         logger.info(f"Successfully connected to Neo4j and refreshed schema.")
@@ -235,6 +237,46 @@ def classify_query_intent(user_query: str, chat_history: List[Dict]) -> str:
             if re.search(pattern, query_lower):
                 logger.info(f"[IntentClassifier] Detected pronoun/reference pattern: {pattern} → follow_up")
                 return "follow_up"
+        
+        # PRIORITY 0.5: Check if query mentions a movie title from previous context
+        # This must come BEFORE factual patterns to handle "who directed [movie from context]"
+        # Find the last assistant message (not the current user message)
+        last_bot_message = None
+        for msg in reversed(chat_history):
+            if msg.get("role") == "assistant":
+                last_bot_message = msg
+                break
+        
+        if last_bot_message:
+            previous_context_movies = last_bot_message.get("context", [])
+            logger.info(f"[IntentClassifier] Checking previous context: {len(previous_context_movies)} movies found")
+            if previous_context_movies:
+                logger.info(f"[IntentClassifier] First movie title: {previous_context_movies[0].get('title', 'N/A')}")
+            
+            if previous_context_movies:
+                import unicodedata
+                def normalize_title(title):
+                    # Remove accents
+                    title = unicodedata.normalize('NFD', title)
+                    title = ''.join(c for c in title if unicodedata.category(c) != 'Mn')
+                    # Remove special characters and lowercase
+                    title = re.sub(r'[^\w\s]', '', title).lower().strip()
+                    return title
+                
+                normalized_query = normalize_title(user_query)
+                logger.info(f"[IntentClassifier] Normalized query: '{normalized_query}'")
+                
+                for movie in previous_context_movies:
+                    movie_title = movie.get("title", "")
+                    if not movie_title or len(movie_title) <= 3:
+                        continue
+                    
+                    normalized_movie_title = normalize_title(movie_title)
+                    logger.info(f"[IntentClassifier] Checking movie: '{movie_title}' → normalized: '{normalized_movie_title}'")
+                    
+                    if normalized_movie_title and normalized_movie_title in normalized_query:
+                        logger.info(f"[IntentClassifier] Query mentions previous movie '{movie_title}' → follow_up")
+                        return "follow_up"
     
     # PRIORITY 1: Factual questions - ALWAYS graph_search
     # These patterns indicate specific factual queries that should use the graph database
@@ -268,32 +310,6 @@ def classify_query_intent(user_query: str, chat_history: List[Dict]) -> str:
             if re.search(pattern, query_lower):
                 logger.info(f"[IntentClassifier] Detected follow-up pattern: {pattern}")
                 return "follow_up"
-        
-        # Check if the query mentions a movie title from the last response
-        last_bot_message = chat_history[-1]
-        previous_context_movies = last_bot_message.get("context", [])
-        if previous_context_movies:
-            for movie in previous_context_movies:
-                movie_title = movie.get("title", "")
-                if not movie_title or len(movie_title) <= 3:
-                    continue
-                
-                # Normalize both titles for comparison (remove special chars, accents, lowercase)
-                import unicodedata
-                def normalize_title(title):
-                    # Remove accents
-                    title = unicodedata.normalize('NFD', title)
-                    title = ''.join(c for c in title if unicodedata.category(c) != 'Mn')
-                    # Remove special characters and lowercase
-                    title = re.sub(r'[^\w\s]', '', title).lower().strip()
-                    return title
-                
-                normalized_movie_title = normalize_title(movie_title)
-                normalized_query = normalize_title(user_query)
-                
-                if normalized_movie_title and normalized_movie_title in normalized_query:
-                    logger.info(f"[IntentClassifier] Query mentions previous movie '{movie_title}' → follow_up")
-                    return "follow_up"
     
     # Pattern 2: Check for specific named entities (directors, actors, specific movies)
     # These should be graph_search  
@@ -436,29 +452,68 @@ def handle_vector_search(user_query: str, chat_history: List[Dict], top_k: int =
     # If genre detected, use graph-based genre search
     if detected_genre and kg:
         logger.info(f"Using genre-based search for: {detected_genre}")
-        cypher = """
-        MATCH (m:Movie)-[:HAS_GENRE]->(g:Genre)
-        WHERE g.name = $genre_name
-        RETURN m.tmdb_id AS tmdb_id, m.title AS title, m.tagline AS tagline, 
-               m.overview AS overview, m.poster_url AS poster_url, 
-               m.trailer_url AS trailer_url, m.vote_average AS vote_average,
-               m.popularity AS popularity
-        ORDER BY m.vote_average DESC, m.popularity DESC
-        LIMIT 15
-        """
-        try:
-            genre_movies = kg.query(cypher, params={"genre_name": detected_genre}) or []
-            if genre_movies:
-                logger.info(f"Found {len(genre_movies)} movies with genre '{detected_genre}'")
-                movie_context = format_movies_for_llm_prompt(genre_movies)
-                history_context = format_chat_history_for_llm(chat_history)
-                system_message = "You are CineBot, a movie recommender. Select the best movies from the context provided and explain why in 1-2 sentences. Format your response exactly as: MOVIE: [Title]\nEXPLANATION: [Your text]"
-                prompt = f"""{history_context}\nBased on the user's request for '{html.escape(user_query)}', I have found the following {detected_genre} movies:\nCONTEXT:\n{movie_context}\n\nTASK: Select the {num_rec} best movies from the CONTEXT. For EACH, respond in the required format.\n"""
-                llm_response = get_llm_response(prompt, system_message)
-                if llm_response:
-                    return llm_response, genre_movies
-        except Exception as e:
-            logger.error(f"Genre-based search failed: {e}")
+        
+        # Check cache first
+        genre_cache = get_genre_cache()
+        cache_key = f"genre_{detected_genre}_top15"
+        cached_movies = genre_cache.get(cache_key, params={"genre": detected_genre})
+        
+        if cached_movies is not None:
+            logger.info(f"✅ Cache HIT: Using cached results for genre '{detected_genre}'")
+            genre_movies = cached_movies
+        else:
+            # Optimized query with index hint
+            cypher = """
+            MATCH (g:Genre {name: $genre_name})<-[:HAS_GENRE]-(m:Movie)
+            WHERE m.vote_average IS NOT NULL AND m.popularity IS NOT NULL
+            RETURN m.tmdb_id AS tmdb_id, m.title AS title, m.tagline AS tagline, 
+                   m.overview AS overview, m.poster_url AS poster_url, 
+                   m.trailer_url AS trailer_url, m.vote_average AS vote_average,
+                   m.popularity AS popularity
+            ORDER BY m.vote_average DESC, m.popularity DESC
+            LIMIT 15
+            """
+            try:
+                logger.info(f"⏳ Executing genre query for '{detected_genre}'...")
+                import signal
+                
+                def timeout_handler(signum, frame):
+                    raise TimeoutError("Query execution exceeded timeout")
+                
+                # Set up timeout alarm (Unix only)
+                try:
+                    signal.signal(signal.SIGALRM, timeout_handler)
+                    signal.alarm(15)  # 15 second timeout for genre query
+                    genre_movies = kg.query(cypher, params={"genre_name": detected_genre}) or []
+                    signal.alarm(0)  # Cancel the alarm
+                    
+                    # Cache the results for future queries
+                    if genre_movies:
+                        genre_cache.set(cache_key, genre_movies, params={"genre": detected_genre})
+                        logger.info(f"💾 Cached {len(genre_movies)} movies for genre '{detected_genre}'")
+                except (AttributeError, ValueError):
+                    # Windows doesn't support SIGALRM, fallback to no timeout
+                    genre_movies = kg.query(cypher, params={"genre_name": detected_genre}) or []
+                    if genre_movies:
+                        genre_cache.set(cache_key, genre_movies, params={"genre": detected_genre})
+            except TimeoutError as te:
+                logger.error(f"⏱️ Genre query timed out after 15s: {te}. Falling back to vector search.")
+                genre_movies = []
+            except Exception as e:
+                logger.error(f"❌ Genre-based search failed: {e}. Falling back to vector search.")
+                genre_movies = []
+        
+        if genre_movies:
+            logger.info(f"Found {len(genre_movies)} movies with genre '{detected_genre}'")
+            movie_context = format_movies_for_llm_prompt(genre_movies)
+            history_context = format_chat_history_for_llm(chat_history)
+            system_message = "You are CineBot, a movie recommender. Select the best movies from the context provided and explain why in 1-2 sentences. Format your response exactly as: MOVIE: [Title]\nEXPLANATION: [Your text]"
+            prompt = f"""{history_context}\nBased on the user's request for '{html.escape(user_query)}', I have found the following {detected_genre} movies:\nCONTEXT:\n{movie_context}\n\nTASK: Select the {num_rec} best movies from the CONTEXT. For EACH, respond in the required format.\n"""
+            llm_response = get_llm_response(prompt, system_message)
+            if llm_response:
+                return llm_response, genre_movies
+        else:
+            logger.warning(f"No movies found for genre '{detected_genre}', falling back to vector search")
     
     # Fallback to vector search
     logger.info("Using vector similarity search")
@@ -743,14 +798,30 @@ TASK: Present up to 5 movies in the required format.
 #     answer = get_llm_response(prompt, system_message)
 #     return answer, previous_context_movies
 def handle_follow_up(user_query: str, chat_history: List[Dict]) -> Tuple[str, List[Dict]]:
-    logger.info("Handling query as a FOLLOW-UP")
+    logger.info("="*70)
+    logger.info("🔍 FOLLOW-UP HANDLER ACTIVATED")
+    logger.info(f"   Query: '{user_query}'")
+    logger.info("="*70)
 
     if not chat_history:
         return "I apologize, but there's no previous conversation to reference. This is a demo version with limited context. Feel free to start a new movie query!", []
 
-    last_bot_message = chat_history[-1]
+    # Find the last assistant message (not the current user message)
+    last_bot_message = None
+    for msg in reversed(chat_history):
+        if msg.get("role") == "assistant":
+            last_bot_message = msg
+            break
+    
+    if not last_bot_message:
+        logger.warning("❌ No previous assistant message found in chat history")
+        return "I apologize, but I don't have any previous context to reference. Please ask a new question!", []
+    
     previous_context_movies = last_bot_message.get("context", [])
     previous_content = last_bot_message.get("content", "")
+    logger.info(f"📦 Previous context has {len(previous_context_movies)} movies")
+    if previous_context_movies:
+        logger.info(f"   Movies: {[m.get('title', 'Unknown') for m in previous_context_movies[:3]]}")
     
     import re
     
@@ -919,6 +990,11 @@ def handle_follow_up(user_query: str, chat_history: List[Dict]) -> Tuple[str, Li
                     actors = [a for a in movie_data.get('actors', []) if a]
                     release_date = movie_data.get('release_date', 'N/A')
                     rating = movie_data.get('rating', 'N/A')
+                    logger.info(f"✅ Graph data received:")
+                    logger.info(f"   Title: {movie_data.get('title')}")
+                    logger.info(f"   Directors: {directors}")
+                    logger.info(f"   Actors: {actors[:3]}")
+                    logger.info(f"   Release: {release_date}, Rating: {rating}")
                     
                     # If user is asking about director but we have no director info, reroute to graph_search
                     if re.search(r'\b(director|directed)\b', user_query, re.I) and not directors:
@@ -944,6 +1020,7 @@ Here's the detailed information:
 TASK: Answer the user's question based on this information.
 """
                     answer = get_llm_response(prompt, system_message)
+                    logger.info(f"🤖 LLM generated answer: '{answer[:100]}...'") if answer else logger.warning("⚠️  LLM returned empty answer")
                     
                     # Fallback if LLM fails: provide direct answer based on query type
                     if not answer:
@@ -958,11 +1035,13 @@ TASK: Answer the user's question based on this information.
                         else:
                             answer = enriched_context.strip()
                     
+                    logger.info(f"✅ Returning answer with {len(previous_context_movies)} context movies")
                     return answer, previous_context_movies
                 else:
                     # No results found in graph query, reroute to graph_search if asking about specific details
+                    logger.warning(f"❌ No graph data found in Neo4j")
                     if re.search(r'\b(director|directed|actor|actress|star|cast|release|year)\b', user_query, re.I):
-                        logger.info(f"No graph data found for {movie_title}, rerouting to graph_search")
+                        logger.info(f"   Rerouting to graph_search...")
                         return handle_graph_search(user_query, chat_history)
         except Exception as e:
             logger.error(f"Error fetching graph data for follow-up: {e}")
@@ -1077,28 +1156,53 @@ def process_query(
     user_query: Optional[str] = None,
     image_bytes: Optional[bytes] = None,
     chat_history: List[Dict[str, Any]] = None
-) -> Tuple[str, List[Dict[str, Any]]]:
+) -> Tuple[str, List[Dict[str, Any]], Dict[str, Any]]:
     """
     Main entry point for handling user queries.
     Orchestrates classification and delegation to the correct handler.
+    Returns: (message, movies, metadata)
     """
     chat_history = chat_history or []
 
     if image_bytes:
-        return recommend_by_poster_image(image_bytes, chat_history)
+        message, movies = recommend_by_poster_image(image_bytes, chat_history)
+        metadata = {
+            "response_type": "recommendation",
+            "source": "poster_search",
+            "input_mode": "image"
+        }
+        return message, movies, metadata
 
     if not user_query:
-        return "Please provide a query.", []
+        return "Please provide a query.", [], {"response_type": "error", "source": "none", "input_mode": "none"}
 
     intent = classify_query_intent(user_query, chat_history)
     logger.info(f"Classified intent as: '{intent}'")
 
     if intent == 'graph_search':
-        return handle_graph_search(user_query, chat_history)
+        message, movies = handle_graph_search(user_query, chat_history)
+        metadata = {
+            "response_type": "answer" if not movies else "recommendation",
+            "source": "graph_search",
+            "input_mode": "text"
+        }
+        return message, movies, metadata
     elif intent == 'follow_up':
-        return handle_follow_up(user_query, chat_history)
+        message, movies = handle_follow_up(user_query, chat_history)
+        metadata = {
+            "response_type": "answer" if not movies else "recommendation",
+            "source": "follow_up",
+            "input_mode": "text"
+        }
+        return message, movies, metadata
     else:
-        return handle_vector_search(user_query, chat_history)
+        message, movies = handle_vector_search(user_query, chat_history)
+        metadata = {
+            "response_type": "recommendation",
+            "source": "vector_search",
+            "input_mode": "text"
+        }
+        return message, movies, metadata
     
 if __name__ == "__main__":
     # Example usage

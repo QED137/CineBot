@@ -154,16 +154,28 @@ node_modules/
 frontend/dist/
 frontend/.env
 
-# Test and debug files
-test_*.py
-*_test.py
-check_*.py
-quick_test.py
-
 # Backup files
 *.old
 *.backup
 *.bak
+
+# Temporary shell scripts
+start.sh
+dev.sh
+setup.sh
+
+# Database files
+*.db
+*.sqlite
+*.sqlite3
+
+# Backend logs
+backend.log
+nohup.out
+
+# FastAPI test scripts (temporary)
+test_fastapi.sh
+start_fastapi.sh
 
 # Scripts
 git_cleanup.sh
@@ -171,4 +183,7 @@ git_cleanup.sh
 # Documentation - keep only README.md
 *.md
 !README.md
+
+# Notebooks
+.ipynb_checkpoints/
 *.ipynb

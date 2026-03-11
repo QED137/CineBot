@@ -10,8 +10,8 @@ const api = axios.create({
 });
 
 export const chatAPI = {
-  // Send text query
-  sendTextQuery: async (query, chatHistory = []) => {
+  // Send text query with cancellation support
+  sendTextQuery: async (query, chatHistory = [], signal = null) => {
     const formData = new FormData();
     formData.append('query', query);
     formData.append('chat_history', JSON.stringify(chatHistory));
@@ -20,12 +20,13 @@ export const chatAPI = {
       headers: {
         'Content-Type': 'multipart/form-data',
       },
+      signal, // AbortController signal for cancellation
     });
     return response.data;
   },
 
-  // Send poster image with chat history
-  sendPosterImage: async (imageFile, chatHistory = []) => {
+  // Send poster image with chat history and cancellation support
+  sendPosterImage: async (imageFile, chatHistory = [], signal = null) => {
     const formData = new FormData();
     formData.append('poster', imageFile);
     formData.append('chat_history', JSON.stringify(chatHistory));
@@ -34,6 +35,7 @@ export const chatAPI = {
       headers: {
         'Content-Type': 'multipart/form-data',
       },
+      signal, // AbortController signal for cancellation
     });
     return response.data;
   },
