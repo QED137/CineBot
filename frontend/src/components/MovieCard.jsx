@@ -123,7 +123,7 @@ export default function MovieCard({ movie, index }) {
         {explanation && (
           <div className="bg-gradient-to-r from-indigo-500/10 to-purple-500/10 border border-indigo-500/20 rounded-lg p-3">
             <p className="text-xs text-slate-300 leading-relaxed">
-              <span className="text-indigo-400 font-semibold">🤖 CineBot says:</span> {explanation}
+              <span className="text-indigo-400 font-semibold">CineBot says:</span> {explanation}
             </p>
           </div>
         )}

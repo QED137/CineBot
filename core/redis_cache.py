@@ -50,15 +50,15 @@ class RedisCache:
                 )
                 # Test connection
                 self.redis_client.ping()
-                logger.info(f"✅ Redis connected at {host}:{port} (db={db})")
+                logger.info(f"Redis connected at {host}:{port} (db={db})")
             except (redis.ConnectionError, redis.TimeoutError) as e:
-                logger.warning(f"⚠️ Redis connection failed: {e}. Using in-memory fallback.")
+                logger.warning(f"Redis connection failed: {e}. Using in-memory fallback.")
                 self.redis_client = None
             except Exception as e:
-                logger.error(f"❌ Redis error: {e}. Using in-memory fallback.")
+                logger.error(f"Redis error: {e}. Using in-memory fallback.")
                 self.redis_client = None
         else:
-            logger.warning("⚠️ Redis not installed. Using in-memory cache (not persistent).")
+            logger.warning("Redis not installed. Using in-memory cache (not persistent).")
     
     def _make_key(self, key: str, params: Optional[Dict] = None) -> str:
         """Create a cache key with prefix and hash of parameters."""
@@ -82,7 +82,7 @@ class RedisCache:
                 logger.debug(f"⚪ Redis MISS: {cache_key}")
                 return None
             except Exception as e:
-                logger.error(f"❌ Redis get error: {e}. Using fallback.")
+                logger.error(f"Redis get error: {e}. Using fallback.")
                 self.redis_client = None  # Disable Redis on error
         
         # Fallback to in-memory
@@ -109,7 +109,7 @@ class RedisCache:
                 logger.debug(f"💾 Redis SET: {cache_key} (TTL: {ttl_to_use}s)")
                 return
             except Exception as e:
-                logger.error(f"❌ Redis set error: {e}. Using fallback.")
+                logger.error(f"Redis set error: {e}. Using fallback.")
                 self.redis_client = None  # Disable Redis on error
         
         # Fallback to in-memory (no TTL support in fallback)
@@ -129,13 +129,13 @@ class RedisCache:
         if self.redis_client:
             try:
                 self.redis_client.delete(cache_key)
-                logger.debug(f"🗑️ Redis DELETE: {cache_key}")
+                logger.debug(f"Redis DELETE: {cache_key}")
             except Exception as e:
-                logger.error(f"❌ Redis delete error: {e}")
+                logger.error(f"Redis delete error: {e}")
         
         if cache_key in self.fallback_cache:
             del self.fallback_cache[cache_key]
-            logger.debug(f"🗑️ Memory DELETE: {cache_key}")
+            logger.debug(f"Memory DELETE: {cache_key}")
     
     def clear(self):
         """Clear all cache entries with our prefix."""
@@ -146,12 +146,12 @@ class RedisCache:
                 keys = self.redis_client.keys(pattern)
                 if keys:
                     self.redis_client.delete(*keys)
-                    logger.info(f"🗑️ Redis cleared {len(keys)} keys")
+                    logger.info(f"Redis cleared {len(keys)} keys")
             except Exception as e:
-                logger.error(f"❌ Redis clear error: {e}")
+                logger.error(f"Redis clear error: {e}")
         
         self.fallback_cache.clear()
-        logger.info("🗑️ Memory cache cleared")
+        logger.info("Memory cache cleared")
     
     def size(self) -> int:
         """Return current cache size."""
@@ -160,7 +160,7 @@ class RedisCache:
                 pattern = f"{self.prefix}:*"
                 return len(self.redis_client.keys(pattern))
             except Exception as e:
-                logger.error(f"❌ Redis size error: {e}")
+                logger.error(f"Redis size error: {e}")
         
         return len(self.fallback_cache)
     
@@ -210,7 +210,7 @@ def clear_all_caches():
     _genre_cache.clear()
     _vector_cache.clear()
     _graph_cache.clear()
-    logger.info("✅ All caches cleared")
+    logger.info("All caches cleared")
 
 
 def get_cache_health() -> Dict[str, Any]:

@@ -89,10 +89,10 @@ def ensure_clip_loaded():
             logger.info(f"⏳ Loading CLIP processor and model on {DEVICE} (lazy load)...")
             clip_processor = CLIPProcessor.from_pretrained(CLIP_MODEL_NAME_CONST)
             clip_model = CLIPModel.from_pretrained(CLIP_MODEL_NAME_CONST).to(DEVICE)
-            logger.info(f"✅ CLIP model '{CLIP_MODEL_NAME_CONST}' successfully loaded.")
+            logger.info(f"CLIP model '{CLIP_MODEL_NAME_CONST}' successfully loaded.")
             return True
         except Exception as e:
-            logger.exception("❌ Failed to load CLIP model and processor.")
+            logger.exception("Failed to load CLIP model and processor.")
             return False
 
 
@@ -121,12 +121,12 @@ def get_query_image_embedding(image_bytes: bytes) -> Optional[List[float]]:
             outputs = clip_model.get_image_features(**inputs)
             # Extract the tensor from BaseModelOutputWithPooling
             image_features = outputs.pooler_output if hasattr(outputs, 'pooler_output') else outputs
-            # ✅ CRITICAL: Normalize the embedding for similarity search
+            # CRITICAL: Normalize the embedding for similarity search
             image_features = image_features / image_features.norm(p=2, dim=-1, keepdim=True)
         
         # Convert to list (no need for complex tensor extraction after normalization)
         embedding = image_features[0].cpu().tolist()
-        logger.info(f"✅ Successfully generated normalized image embedding of length {len(embedding)}")
+        logger.info(f"Successfully generated normalized image embedding of length {len(embedding)}")
         return embedding
     except Exception as e:
         logger.error(f"Failed to compute image embedding locally: {e}", exc_info=True)
@@ -459,7 +459,7 @@ def handle_vector_search(user_query: str, chat_history: List[Dict], top_k: int =
         cached_movies = genre_cache.get(cache_key, params={"genre": detected_genre})
         
         if cached_movies is not None:
-            logger.info(f"✅ Cache HIT: Using cached results for genre '{detected_genre}'")
+            logger.info(f"Cache HIT: Using cached results for genre '{detected_genre}'")
             genre_movies = cached_movies
         else:
             # Optimized query with index hint
@@ -497,10 +497,10 @@ def handle_vector_search(user_query: str, chat_history: List[Dict], top_k: int =
                     if genre_movies:
                         genre_cache.set(cache_key, genre_movies, params={"genre": detected_genre})
             except TimeoutError as te:
-                logger.error(f"⏱️ Genre query timed out after 15s: {te}. Falling back to vector search.")
+                logger.error(f"Genre query timed out after 15s: {te}. Falling back to vector search.")
                 genre_movies = []
             except Exception as e:
-                logger.error(f"❌ Genre-based search failed: {e}. Falling back to vector search.")
+                logger.error(f"Genre-based search failed: {e}. Falling back to vector search.")
                 genre_movies = []
         
         if genre_movies:
@@ -799,7 +799,7 @@ TASK: Present up to 5 movies in the required format.
 #     return answer, previous_context_movies
 def handle_follow_up(user_query: str, chat_history: List[Dict]) -> Tuple[str, List[Dict]]:
     logger.info("="*70)
-    logger.info("🔍 FOLLOW-UP HANDLER ACTIVATED")
+    logger.info("FOLLOW-UP HANDLER ACTIVATED")
     logger.info(f"   Query: '{user_query}'")
     logger.info("="*70)
 
@@ -814,12 +814,12 @@ def handle_follow_up(user_query: str, chat_history: List[Dict]) -> Tuple[str, Li
             break
     
     if not last_bot_message:
-        logger.warning("❌ No previous assistant message found in chat history")
+        logger.warning("No previous assistant message found in chat history")
         return "I apologize, but I don't have any previous context to reference. Please ask a new question!", []
     
     previous_context_movies = last_bot_message.get("context", [])
     previous_content = last_bot_message.get("content", "")
-    logger.info(f"📦 Previous context has {len(previous_context_movies)} movies")
+    logger.info(f"Previous context has {len(previous_context_movies)} movies")
     if previous_context_movies:
         logger.info(f"   Movies: {[m.get('title', 'Unknown') for m in previous_context_movies[:3]]}")
     
@@ -990,7 +990,7 @@ def handle_follow_up(user_query: str, chat_history: List[Dict]) -> Tuple[str, Li
                     actors = [a for a in movie_data.get('actors', []) if a]
                     release_date = movie_data.get('release_date', 'N/A')
                     rating = movie_data.get('rating', 'N/A')
-                    logger.info(f"✅ Graph data received:")
+                    logger.info(f"Graph data received:")
                     logger.info(f"   Title: {movie_data.get('title')}")
                     logger.info(f"   Directors: {directors}")
                     logger.info(f"   Actors: {actors[:3]}")
@@ -1020,7 +1020,7 @@ Here's the detailed information:
 TASK: Answer the user's question based on this information.
 """
                     answer = get_llm_response(prompt, system_message)
-                    logger.info(f"🤖 LLM generated answer: '{answer[:100]}...'") if answer else logger.warning("⚠️  LLM returned empty answer")
+                    logger.info(f"LLM generated answer: '{answer[:100]}...'") if answer else logger.warning("LLM returned empty answer")
                     
                     # Fallback if LLM fails: provide direct answer based on query type
                     if not answer:
@@ -1035,11 +1035,11 @@ TASK: Answer the user's question based on this information.
                         else:
                             answer = enriched_context.strip()
                     
-                    logger.info(f"✅ Returning answer with {len(previous_context_movies)} context movies")
+                    logger.info(f"Returning answer with {len(previous_context_movies)} context movies")
                     return answer, previous_context_movies
                 else:
                     # No results found in graph query, reroute to graph_search if asking about specific details
-                    logger.warning(f"❌ No graph data found in Neo4j")
+                    logger.warning(f"No graph data found in Neo4j")
                     if re.search(r'\b(director|directed|actor|actress|star|cast|release|year)\b', user_query, re.I):
                         logger.info(f"   Rerouting to graph_search...")
                         return handle_graph_search(user_query, chat_history)
@@ -1047,7 +1047,7 @@ TASK: Answer the user's question based on this information.
             logger.error(f"Error fetching graph data for follow-up: {e}")
             # Continue with regular follow-up handling
 
-    # 🧠 Standard LLM-based follow-up on movie list
+    # Standard LLM-based follow-up on movie list
     movie_context = format_movies_for_llm_prompt(previous_context_movies)
     history_context = format_chat_history_for_llm(chat_history[-3:])  # Last 3 messages for context
 
@@ -1069,7 +1069,7 @@ TASK: Answer the user's question based on the CONTEXT. Be conversational and hel
 
     answer = get_llm_response(prompt, system_message)
 
-    # ✅ Handle None or failed responses
+    # Handle None or failed responses
     if not answer or (
         "cannot answer" in answer.lower()
         or "don't have" in answer.lower()

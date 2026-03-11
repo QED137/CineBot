@@ -68,7 +68,7 @@ export default function ChatTab() {
       const data = await chatAPI.getSuggestion();
       if (data.suggestion) {
         setPlaceholder(data.suggestion);
-        addToast('Got a new suggestion! ✨', 'success');
+        addToast('Got a new suggestion!', 'success');
       }
     } catch (error) {
       console.error('Failed to fetch suggestion:', error);
@@ -247,7 +247,7 @@ export default function ChatTab() {
       
       // Show success toast
       if (data.meta?.has_movies && data.meta?.count > 0) {
-        addToast(`Found ${data.meta.count} movies for you! 🎬`, 'success');
+        addToast(`Found ${data.meta.count} movies for you!`, 'success');
       }
     } catch (error) {
       console.error('Error sending message:', error);
@@ -256,7 +256,7 @@ export default function ChatTab() {
       if (error.code === 'ERR_CANCELED' || error.name === 'CanceledError') {
         const cancelMessage = {
           role: 'assistant',
-          content: '⏸️ Query stopped by user.',
+          content: 'Query stopped by user.',
           isError: false,
         };
         setMessages(prev => [...prev, cancelMessage]);

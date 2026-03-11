@@ -285,7 +285,7 @@ async def clear_cache():
     from core.redis_cache import clear_all_caches
     
     clear_all_caches()
-    logger.info("🗑️ All caches cleared via API")
+    logger.info("All caches cleared via API")
     
     return JSONResponse({
         "status": "success",
@@ -399,7 +399,7 @@ async def handle_chat(
         # -----------------------------------------------------------------------
 
         # Logging (optional, for debugging)
-        print("🧠 chat_history (trimmed) stored in session:")
+        print("chat_history (trimmed) stored in session:")
         for msg in session_history:
             print(f"{msg['role']}: {msg['content'][:60]}")
 
@@ -424,7 +424,7 @@ async def handle_chat(
         logger.error(f"Error in chat API: {e}", exc_info=True)
         import traceback
         error_details = traceback.format_exc()
-        print(f"\n❌ CHAT API ERROR:\n{error_details}\n")
+        print(f"\nCHAT API ERROR:\n{error_details}\n")
         raise HTTPException(
             status_code=500,
             detail=f"An internal error occurred: {str(e)}"

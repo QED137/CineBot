@@ -138,7 +138,7 @@ export default function Sidebar({ activeTab, setActiveTab }) {
           transition={{ delay: 0.6 }}
           className="text-center text-sm text-slate-500 mt-4 font-medium"
         >
-          ✍️ JANMAJAY KUMAR
+          JANMAJAY KUMAR
         </motion.p>
       </div>
     </aside>
