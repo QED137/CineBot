@@ -584,7 +584,7 @@ def handle_graph_search(user_query: str, chat_history: List[Dict]) -> Tuple[str,
     Do not return any explanations or apologies.
     Your response must be in a markdown code block with the "cypher" tag.
     For person names, use CONTAINS for partial matching (e.g., 'Nolan' should match 'Christopher Nolan').
-    For movie titles, use exact matching OR CONTAINS if not sure.
+    For movie titles, ALWAYS use toLower() and CONTAINS for fuzzy matching to handle variations in capitalization and formatting.
     Always return movie details: m.title, m.overview, m.poster_url, m.trailer_url, m.tmdb_id
     
     Schema:
@@ -596,7 +596,8 @@ def handle_graph_search(user_query: str, chat_history: List[Dict]) -> Tuple[str,
     Question: Who directed the movie The Matrix?
     Cypher:
     ```cypher
-    MATCH (p:Person)-[:DIRECTED]->(m:Movie {{title: 'The Matrix'}})
+    MATCH (p:Person)-[:DIRECTED]->(m:Movie)
+    WHERE toLower(m.title) CONTAINS 'matrix'
     RETURN p.name AS director, m.title AS movie
     ```
 
@@ -604,23 +605,32 @@ def handle_graph_search(user_query: str, chat_history: List[Dict]) -> Tuple[str,
     Cypher:
     ```cypher
     MATCH (p:Person)-[:DIRECTED]->(m:Movie)
-    WHERE m.title CONTAINS 'Titanic'
+    WHERE toLower(m.title) CONTAINS 'titanic'
     RETURN p.name AS director, m.title AS movie
     ```
 
     Question: What movies did Tom Hanks act in?
     Cypher:
     ```cypher
-    MATCH (p:Person {{name: 'Tom Hanks'}})-[:ACTED_IN]->(m:Movie)
+    MATCH (p:Person)-[:ACTED_IN]->(m:Movie)
+    WHERE toLower(p.name) CONTAINS 'tom hanks'
     RETURN m.title AS title, m.overview AS overview, m.poster_url AS poster_url, m.trailer_url AS trailer_url, m.tmdb_id AS tmdb_id
     LIMIT 10
+    ```
+    
+    Question: Who directed spiderman?
+    Cypher:
+    ```cypher
+    MATCH (p:Person)-[:DIRECTED]->(m:Movie)
+    WHERE toLower(m.title) CONTAINS 'spider'
+    RETURN p.name AS director, m.title AS movie
     ```
 
     Question: Tell me a movie from Nolan
     Cypher:
     ```cypher
     MATCH (p:Person)-[:DIRECTED]->(m:Movie)
-    WHERE p.name CONTAINS 'Nolan'
+    WHERE toLower(p.name) CONTAINS 'nolan'
     RETURN m.title AS title, m.overview AS overview, m.poster_url AS poster_url, m.trailer_url AS trailer_url, m.tmdb_id AS tmdb_id
     LIMIT 10
     ```
@@ -629,7 +639,7 @@ def handle_graph_search(user_query: str, chat_history: List[Dict]) -> Tuple[str,
     Cypher:
     ```cypher
     MATCH (p:Person)-[:DIRECTED]->(m:Movie)
-    WHERE p.name CONTAINS 'Spielberg'
+    WHERE toLower(p.name) CONTAINS 'spielberg'
     RETURN m.title AS title, m.overview AS overview, m.poster_url AS poster_url, m.trailer_url AS trailer_url, m.tmdb_id AS tmdb_id
     LIMIT 10
     ```
@@ -638,7 +648,7 @@ def handle_graph_search(user_query: str, chat_history: List[Dict]) -> Tuple[str,
     Cypher:
     ```cypher
     MATCH (p:Person)-[:DIRECTED]->(m:Movie)
-    WHERE p.name CONTAINS 'Nolan'
+    WHERE toLower(p.name) CONTAINS 'nolan'
     RETURN m.title AS title, m.overview AS overview, m.poster_url AS poster_url, m.trailer_url AS trailer_url, m.tmdb_id AS tmdb_id
     LIMIT 5
     ```
