@@ -27,7 +27,7 @@ def test_query(query_text, description):
             answer = data.get('response', 'No response')
             movies = data.get('movies', [])
             
-            print(f"\n✓ SUCCESS!")
+            print(f"\n[OK] SUCCESS!")
             print(f"\nResponse:\n{answer[:500]}...")  # First 500 chars
             print(f"\nMovies found: {len(movies)}")
             if movies:
@@ -36,12 +36,12 @@ def test_query(query_text, description):
                     print(f"  {i}. {movie.get('title', 'Unknown')} - {movie.get('overview', '')[:80]}...")
             return True
         else:
-            print(f"\n✗ FAILED! Status: {response.status_code}")
+            print(f"\n[FAIL] FAILED! Status: {response.status_code}")
             print(f"Response: {response.text[:200]}")
             return False
             
     except Exception as e:
-        print(f"\n✗ ERROR: {e}")
+        print(f"\n[FAIL] ERROR: {e}")
         return False
 
 def main():
@@ -54,9 +54,9 @@ def main():
     # Check if server is running
     try:
         response = requests.get(f"{BASE_URL}/", timeout=5)
-        print(f"\n✓ Server is running on {BASE_URL}")
+        print(f"\n[OK] Server is running on {BASE_URL}")
     except:
-        print(f"\n✗ ERROR: Server is not running on {BASE_URL}")
+        print(f"\n[FAIL] ERROR: Server is not running on {BASE_URL}")
         print("Please start the server with: python3 app.py")
         return
     
@@ -107,16 +107,16 @@ def main():
     passed = sum(1 for v in results.values() if v)
     
     for test_name, passed_test in results.items():
-        status = "✓ PASS" if passed_test else "✗ FAIL"
+        status = "[OK] PASS" if passed_test else "[FAIL] FAIL"
         print(f"{status}: {test_name}")
     
     print(f"\nTotal: {passed}/{total} tests passed ({passed/total*100:.0f}%)")
     print("="*70 + "\n")
     
     if passed == total:
-        print("🎉 All tests passed! Your CineBot is working perfectly!")
+        print("[DONE] All tests passed! Your CineBot is working perfectly!")
     else:
-        print("⚠ Some tests failed. Check the error messages above.")
+        print("[WARNING] Some tests failed. Check the error messages above.")
 
 if __name__ == "__main__":
     main()

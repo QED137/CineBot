@@ -34,14 +34,14 @@ try:
     clip_processor = CLIPProcessor.from_pretrained("openai/clip-vit-base-patch32", token=hf_token)
     clip_model = CLIPModel.from_pretrained("openai/clip-vit-base-patch32", token=hf_token)
     clip_model.eval()
-    logger.info("✓ CLIP model loaded\n")
+    logger.info("[OK] CLIP model loaded\n")
 except Exception as e:
     logger.error(f"Failed to load CLIP model: {e}")
     logger.info("Trying to import from core_rag instead...")
     # Try to import from core_rag if already loaded
     try:
         from core.core_rag import clip_model, clip_processor
-        logger.info("✓ Using CLIP model from core_rag\n")
+        logger.info("[OK] Using CLIP model from core_rag\n")
     except Exception as e2:
         logger.error(f"Could not load CLIP model: {e2}")
         logger.error("Poster embeddings will be skipped!")
@@ -107,7 +107,7 @@ def add_poster_embeddings(batch_size=50):
     logger.info("="*70)
     
     if not clip_model or not clip_processor:
-        logger.warning("⚠ CLIP model not available. Skipping poster embeddings.")
+        logger.warning("[WARNING] CLIP model not available. Skipping poster embeddings.")
         logger.info("You can add poster embeddings later when CLIP is available.\n")
         return
     
@@ -131,7 +131,7 @@ def add_poster_embeddings(batch_size=50):
     logger.info(f"Found {total:,} movies needing poster embeddings\n")
     
     if total == 0:
-        logger.info("✓ All movies already have poster embeddings!\n")
+        logger.info("[OK] All movies already have poster embeddings!\n")
         return
     
     success_count = 0
@@ -154,7 +154,7 @@ def add_poster_embeddings(batch_size=50):
             
             success_count += 1
             if idx % 10 == 0:
-                logger.info(f"  [{idx}/{total}] ✓ '{title}' - Success: {success_count}, Failed: {failed_count}")
+                logger.info(f"  [{idx}/{total}] [OK] '{title}' - Success: {success_count}, Failed: {failed_count}")
         else:
             failed_count += 1
         
@@ -165,7 +165,7 @@ def add_poster_embeddings(batch_size=50):
             logger.info(f"Success: {success_count}, Failed: {failed_count}")
             logger.info(f"{'='*60}\n")
     
-    logger.info(f"\n✓ Poster embeddings complete: {success_count} added, {failed_count} failed\n")
+    logger.info(f"\n[OK] Poster embeddings complete: {success_count} added, {failed_count} failed\n")
 
 def add_genre_relationships(batch_size=50):
     """Add HAS_GENRE relationships for movies without genres"""
@@ -190,7 +190,7 @@ def add_genre_relationships(batch_size=50):
     logger.info(f"Found {total:,} movies needing genres\n")
     
     if total == 0:
-        logger.info("✓ All movies already have genres!\n")
+        logger.info("[OK] All movies already have genres!\n")
         return
     
     success_count = 0
@@ -218,7 +218,7 @@ def add_genre_relationships(batch_size=50):
             success_count += 1
             if idx % 10 == 0:
                 genre_names = [g.get("name") for g in genres]
-                logger.info(f"  [{idx}/{total}] ✓ '{title}' - {', '.join(genre_names)}")
+                logger.info(f"  [{idx}/{total}] [OK] '{title}' - {', '.join(genre_names)}")
         else:
             failed_count += 1
         
@@ -232,7 +232,7 @@ def add_genre_relationships(batch_size=50):
             logger.info(f"Success: {success_count}, Failed: {failed_count}")
             logger.info(f"{'='*60}\n")
     
-    logger.info(f"\n✓ Genre relationships complete: {success_count} movies updated, {failed_count} failed\n")
+    logger.info(f"\n[OK] Genre relationships complete: {success_count} movies updated, {failed_count} failed\n")
 
 def fill_small_gaps():
     """Fill remaining small gaps (text embeddings, directors, actors)"""
@@ -271,9 +271,9 @@ def fill_small_gaps():
                         MATCH (m:Movie {tmdb_id: $tmdb_id})
                         SET m.taglineEmbedding = $embedding
                     """, tmdb_id=movie['tmdb_id'], embedding=embedding)
-                logger.info(f"  ✓ '{title}'")
+                logger.info(f"  [OK] '{title}'")
     else:
-        logger.info("\n✓ All movies already have text embeddings")
+        logger.info("\n[OK] All movies already have text embeddings")
     
     logger.info("")
 
@@ -298,10 +298,10 @@ def main():
     logger.info("ENHANCEMENT COMPLETE!")
     logger.info("="*70)
     logger.info("\nYour database now supports:")
-    logger.info("  1. ✓ Poster-based search (visual similarity)")
-    logger.info("  2. ✓ Factual queries (directors, actors)")
-    logger.info("  3. ✓ Genre queries (HAS_GENRE relationships)")
-    logger.info("  4. ✓ Semantic search (text embeddings)")
+    logger.info("  1. [OK] Poster-based search (visual similarity)")
+    logger.info("  2. [OK] Factual queries (directors, actors)")
+    logger.info("  3. [OK] Genre queries (HAS_GENRE relationships)")
+    logger.info("  4. [OK] Semantic search (text embeddings)")
     logger.info("="*70 + "\n")
     
     close_driver()

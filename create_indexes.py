@@ -38,32 +38,32 @@ def create_indexes():
     
     try:
         with driver.session() as session:
-            print("🔧 Creating indexes on Neo4j database...")
+            print("[CONFIG] Creating indexes on Neo4j database...")
             print("=" * 60)
             
             for index_query in indexes:
                 try:
                     session.run(index_query)
                     index_name = index_query.split("FOR")[0].split("IF NOT EXISTS")[0].strip()
-                    print(f"✅ {index_name}")
+                    print(f"[OK] {index_name}")
                 except Exception as e:
-                    print(f"⚠️  Failed to create index: {e}")
+                    print(f"[WARNING]  Failed to create index: {e}")
             
             print("=" * 60)
-            print("\n📊 Checking existing indexes...")
+            print("\n[STATS] Checking existing indexes...")
             result = session.run("SHOW INDEXES")
             for record in result:
                 print(f"  - {record.get('name', 'N/A')}: {record.get('labelsOrTypes', 'N/A')} ON {record.get('properties', 'N/A')}")
             
-            print("\n✅ Index creation complete!")
-            print("\n💡 Tip: Indexes will improve query performance, especially for:")
+            print("\n[OK] Index creation complete!")
+            print("\n[TIP] Tip: Indexes will improve query performance, especially for:")
             print("   • Genre-based searches")
             print("   • Movie lookups by title or ID")
             print("   • Sorting by ratings and popularity")
             print("   • Director and actor searches")
             
     except Exception as e:
-        print(f"❌ Error: {e}")
+        print(f"[ERROR] Error: {e}")
         import traceback
         traceback.print_exc()
     finally:

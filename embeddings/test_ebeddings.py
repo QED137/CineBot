@@ -78,11 +78,11 @@ def generate_batch_image_embeddings_revised(movie_posters: List[Dict]) -> List[D
                 embedding = image_features[0].cpu().tolist()
             logger.debug(f"Successfully generated embedding for movie ID: {movie_id} ('{movie_title}')")
         except requests.exceptions.RequestException as req_e:
-            logger.warning(f"⚠️ Movie ID {movie_id} ('{movie_title}') URL: {image_url} - Request error: {req_e}")
+            logger.warning(f"[WARNING] Movie ID {movie_id} ('{movie_title}') URL: {image_url} - Request error: {req_e}")
         except UnidentifiedImageError:
-             logger.warning(f"⚠️ Movie ID {movie_id} ('{movie_title}') URL: {image_url} - Could not identify image file (PIL error).")
+             logger.warning(f"[WARNING] Movie ID {movie_id} ('{movie_title}') URL: {image_url} - Could not identify image file (PIL error).")
         except Exception as e:
-            logger.warning(f"⚠️ Movie ID {movie_id} ('{movie_title}') URL: {image_url} - Embedding generation error: {type(e).__name__} - {e}")
+            logger.warning(f"[WARNING] Movie ID {movie_id} ('{movie_title}') URL: {image_url} - Embedding generation error: {type(e).__name__} - {e}")
         finally:
             results.append({"movieId": movie_id, "embedding": embedding})
 
@@ -143,7 +143,7 @@ def test_poster_embeddings_for_specific_ids(kg: Neo4jGraph, movie_tmdb_ids_to_te
     # 3. Store embeddings
     store_embeddings_in_neo4j_optimized(kg, embeddings_results)
 
-    logger.info(f"✅ Poster embedding test pipeline completed for TMDB IDs: {movie_tmdb_ids_to_test}.")
+    logger.info(f"[OK] Poster embedding test pipeline completed for TMDB IDs: {movie_tmdb_ids_to_test}.")
 
     # 4. Verify (optional, but recommended)
     verify_poster_embeddings_in_db(kg, movie_tmdb_ids_to_test)
@@ -207,7 +207,7 @@ def generate_tagline_embeddings_test(kg: Neo4jGraph, movie_titles: List[str]):
     SET m.taglineEmbedding = embedding
     RETURN m.title AS title, m.taglineEmbedding IS NOT NULL AS embedded
     """, params={"apiKey": OPENAI_API_KEY, "endpoint": OPENAI_ENDPOINT, "titles": movie_titles}) # Assuming OPENAI_API_KEY and OPENAI_ENDPOINT are globally accessible or passed in
-    logger.info(f"✅ Tagline embedding test attempted for movies: {', '.join(movie_titles)}.")
+    logger.info(f"[OK] Tagline embedding test attempted for movies: {', '.join(movie_titles)}.")
 
 
 # --- Example Usage in your main test section ---

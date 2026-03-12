@@ -85,7 +85,7 @@ capabilities of LLMs, the system delivers contextually relevant and accurate rec
 
 ---
 
-## 🏠 **Local Development (No Cloud Needed!)**
+## [HOME] **Local Development (No Cloud Needed!)**
 
 Run everything locally with Docker - **no more daily Neo4j Aura restarts!**
 
@@ -98,14 +98,14 @@ cat LOCAL_NEO4J_SETUP.md
 ```
 
 **Benefits:**
-- ✅ No daily manual restarts (Aura free tier limitation)
-- ✅ Better performance on your hardware (6 CPU, 12GB RAM)
-- ✅ Always available, no internet required
-- ✅ Full control over database configuration
+- [OK] No daily manual restarts (Aura free tier limitation)
+- [OK] Better performance on your hardware (6 CPU, 12GB RAM)
+- [OK] Always available, no internet required
+- [OK] Full control over database configuration
 
 ---
 
-## 🚀 **Cloud Deployment**
+## [DEPLOY] **Cloud Deployment**
 
 Deploy CineBot to the cloud in minutes! See our deployment guides:
 
@@ -128,11 +128,11 @@ Deploy CineBot to the cloud in minutes! See our deployment guides:
 1. Push to GitHub
 2. Import to [Railway.app](https://railway.app)
 3. Add environment variables
-4. Done! 🎉
+4. Done! [DONE]
 
 ---
 
-## 📚 Documentation
+## [DOCS] Documentation
 
 - [Architecture Overview](ARCHITECTURE.md)
 - [FastAPI Migration](FASTAPI_MIGRATION.md)

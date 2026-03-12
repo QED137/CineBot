@@ -342,7 +342,7 @@ def handle_chat():
         logger.error(f"Error in chat API: {e}", exc_info=True)
         import traceback
         error_details = traceback.format_exc()
-        print(f"\n❌ CHAT API ERROR:\n{error_details}\n")
+        print(f"\n[ERROR] CHAT API ERROR:\n{error_details}\n")
         return jsonify({
             "error": f"An internal error occurred: {str(e)}",
             "details": error_details if app.debug else None

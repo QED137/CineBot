@@ -1,4 +1,4 @@
-# 🎬 CineBot - Quick Reference
+# [MOVIE] CineBot - Quick Reference
 
 ## Installation
 

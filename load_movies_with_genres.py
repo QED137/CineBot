@@ -222,7 +222,7 @@ def main():
             if movie_data:
                 if load_movie_to_neo4j(session, movie_data):
                     loaded_count += 1
-                    logger.info(f"  ✅ Loaded: {movie_data['title']} (Genres: {', '.join(movie_data['genres'])})")
+                    logger.info(f"  [OK] Loaded: {movie_data['title']} (Genres: {', '.join(movie_data['genres'])})")
                 else:
                     failed_count += 1
             else:

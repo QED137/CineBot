@@ -15,7 +15,7 @@ def clear_database():
     driver = get_driver()
     
     logger.info("="*60)
-    logger.warning("⚠️  WARNING: This will delete ALL data from the database!")
+    logger.warning("[WARNING]  WARNING: This will delete ALL data from the database!")
     logger.info("="*60)
     
     with driver.session(database="neo4j") as session:
@@ -44,7 +44,7 @@ def clear_database():
         remaining = result.single()["count"]
         
         if remaining == 0:
-            logger.info("✓ Database cleared successfully!")
+            logger.info("[OK] Database cleared successfully!")
         else:
             logger.error(f"Failed to clear database. {remaining} nodes remaining.")
     

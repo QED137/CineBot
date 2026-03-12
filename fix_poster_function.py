@@ -105,7 +105,7 @@ TASK: Recommend 3-5 movies from the CONTEXT. Explain why based on their overview
     with open('core/core_rag.py', 'w') as f:
         f.writelines(new_lines)
     
-    print(f"✅ Successfully replaced function (lines {start_idx + 1} to {end_idx})")
+    print(f"[OK] Successfully replaced function (lines {start_idx + 1} to {end_idx})")
     print("Changes:")
     print("- Added CLIP model validation")
     print("- Made poster validation lenient (threshold=0.5)")

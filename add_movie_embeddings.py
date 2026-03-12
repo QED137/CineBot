@@ -78,7 +78,7 @@ def add_embeddings_to_movies():
                 text_to_embed = f"{tagline} {overview}".strip()
                 
                 if not text_to_embed:
-                    logger.warning(f"  ⚠️  {title}: No text to embed, skipping")
+                    logger.warning(f"  [WARNING]  {title}: No text to embed, skipping")
                     continue
                 
                 # Generate embedding
@@ -94,12 +94,12 @@ def add_embeddings_to_movies():
                         session.run(update_query, {"tmdb_id": tmdb_id, "embedding": embedding})
                         
                         processed += 1
-                        logger.info(f"  ✅ {processed}/{total}: {title}")
+                        logger.info(f"  [OK] {processed}/{total}: {title}")
                     else:
-                        logger.error(f"  ❌ {title}: Failed to generate embedding")
+                        logger.error(f"  [ERROR] {title}: Failed to generate embedding")
                         
                 except Exception as e:
-                    logger.error(f"  ❌ {title}: Error - {e}")
+                    logger.error(f"  [ERROR] {title}: Error - {e}")
                 
                 # Rate limiting for OpenAI API
                 time.sleep(0.1)
@@ -130,12 +130,12 @@ def create_vector_index():
         
         try:
             session.run(index_query)
-            logger.info("✅ Vector index created successfully")
+            logger.info("[OK] Vector index created successfully")
         except Exception as e:
             if "already exists" in str(e).lower():
-                logger.info("✅ Vector index already exists")
+                logger.info("[OK] Vector index already exists")
             else:
-                logger.error(f"❌ Error creating index: {e}")
+                logger.error(f"[ERROR] Error creating index: {e}")
     
     close_driver()
 

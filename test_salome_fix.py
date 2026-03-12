@@ -50,14 +50,14 @@ def test_salome_conversation():
     
     if salome_movie:
         movie_to_ask = salome_movie.get('title')
-        print(f"\n✅ Found '{movie_to_ask}' in recommendations")
+        print(f"\n[OK] Found '{movie_to_ask}' in recommendations")
     else:
         # If Salome not in results, use the first movie for testing
         if context1:
             movie_to_ask = context1[0].get('title')
-            print(f"\n⚠️ Salome not in recommendations, testing with '{movie_to_ask}' instead")
+            print(f"\n[WARNING] Salome not in recommendations, testing with '{movie_to_ask}' instead")
         else:
-            print("\n❌ No movies in recommendations!")
+            print("\n[ERROR] No movies in recommendations!")
             return
     
     # Step 3: Ask who directed the movie
@@ -77,13 +77,13 @@ def test_salome_conversation():
     print("=" * 80)
     
     if "don't know" in response2.lower() or "don't have" in response2.lower():
-        print("❌ FAIL: Bot still says it doesn't know the answer")
+        print("[ERROR] FAIL: Bot still says it doesn't know the answer")
         print(f"   Response: {response2}")
     elif "directed" in response2.lower() or "director" in response2.lower():
-        print("✅ PASS: Bot provided director information")
+        print("[OK] PASS: Bot provided director information")
         print(f"   Response: {response2}")
     else:
-        print("⚠️ UNCERTAIN: Response doesn't clearly indicate success or failure")
+        print("[WARNING] UNCERTAIN: Response doesn't clearly indicate success or failure")
         print(f"   Response: {response2}")
 
 if __name__ == "__main__":
@@ -91,4 +91,4 @@ if __name__ == "__main__":
         test_salome_conversation()
     except Exception as e:
         logger.error(f"Test failed with error: {e}", exc_info=True)
-        print(f"\n❌ TEST ERROR: {e}")
+        print(f"\n[ERROR] TEST ERROR: {e}")

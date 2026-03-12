@@ -107,7 +107,7 @@ class RedisCache:
                     ttl_to_use,
                     json.dumps(value)
                 )
-                logger.debug(f"💾 Redis SET: {cache_key} (TTL: {ttl_to_use}s)")
+                logger.debug(f"Redis SET: {cache_key} (TTL: {ttl_to_use}s)")
                 return
             except Exception as e:
                 logger.error(f"Redis set error: {e}. Using fallback.")
@@ -115,7 +115,7 @@ class RedisCache:
         
         # Fallback to in-memory (no TTL support in fallback)
         self.fallback_cache[cache_key] = value
-        logger.debug(f"💾 Memory SET: {cache_key}")
+        logger.debug(f"Memory SET: {cache_key}")
         
         # Limit fallback cache size
         if len(self.fallback_cache) > 1000:

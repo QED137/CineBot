@@ -93,7 +93,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         const formData = new FormData();
         formData.append('query', query);
-        formData.append('chat_history', JSON.stringify(chatHistory));  // ✅ send full history
+        formData.append('chat_history', JSON.stringify(chatHistory));  // [OK] send full history
 
         textQueryInput.value = '';
         textQueryInput.style.height = 'auto';
@@ -159,7 +159,7 @@ document.addEventListener('DOMContentLoaded', () => {
     messageDiv.className = `chat-message ${role}`;
 
     if (!isLoading) {
-        chatHistory.push({ role, content: text });  // ✅ Save to chat history
+        chatHistory.push({ role, content: text });  // [OK] Save to chat history
     }
 
     if (isLoading) {
@@ -197,7 +197,7 @@ document.addEventListener('DOMContentLoaded', () => {
             lastMessage.appendChild(cardsContainer);
         }
 
-        // ✅ Add assistant message to chatHistory with context
+        // [OK] Add assistant message to chatHistory with context
         chatHistory.push({
             role: 'assistant',
             content: text,

@@ -18,7 +18,7 @@ with driver.session(database="neo4j") as session:
         for record in records:
             print(f"  - {record['name']}")
     else:
-        print("❌ No Genre nodes found!")
+        print("[ERROR] No Genre nodes found!")
     
     # Check Movie-Genre relationships
     print("\n" + "="*80)
@@ -37,7 +37,7 @@ with driver.session(database="neo4j") as session:
         for record in records:
             print(f"  - {record['genre']}: {record['movie_count']} movies")
     else:
-        print("❌ No Movie-Genre relationships found!")
+        print("[ERROR] No Movie-Genre relationships found!")
     
     # Check a sample romantic movie
     print("\n" + "="*80)
@@ -56,7 +56,7 @@ with driver.session(database="neo4j") as session:
         for record in records:
             print(f"  - {record['title']} (Genre: {record['genre']})")
     else:
-        print("❌ No movies found with Romance-related genre!")
+        print("[ERROR] No movies found with Romance-related genre!")
         
         # Try case-insensitive search
         print("\nTrying case-insensitive search for any genre with 'rom' in it...")

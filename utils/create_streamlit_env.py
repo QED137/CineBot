@@ -5,7 +5,7 @@
 import os
 
 def write_streamlit_secrets_from_env():
-    os.makedirs(".streamlit", exist_ok=True)  # ✅ Ensure directory exists
+    os.makedirs(".streamlit", exist_ok=True)  # [OK] Ensure directory exists
 
     with open(".streamlit/secrets.toml", "w") as f:
         f.write(f"""

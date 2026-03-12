@@ -14,7 +14,7 @@ from neo4j import GraphDatabase
 def test_connection():
     """Test Neo4j connection and query performance"""
     
-    print("🔍 CineBot Neo4j Connection Diagnostic")
+    print(" CineBot Neo4j Connection Diagnostic")
     print("=" * 60)
     
     driver = GraphDatabase.driver(
@@ -32,7 +32,7 @@ def test_connection():
             result = session.run("RETURN 1 as test")
             result.single()
             elapsed = time.time() - start
-            print(f"   ✅ Connection OK ({elapsed:.2f}s)")
+            print(f"   [OK] Connection OK ({elapsed:.2f}s)")
             
             # Test 2: Count nodes
             print("\n2️⃣ Counting database nodes...")
@@ -66,7 +66,7 @@ def test_connection():
             print(f"   ⏱️  Query time: {elapsed:.2f}s")
             
             if elapsed > 5:
-                print(f"   ⚠️  SLOW! This query should be < 1s. Consider creating indexes:")
+                print(f"   [WARNING]  SLOW! This query should be < 1s. Consider creating indexes:")
                 print(f"      python create_indexes.py")
             
             # Test 4: Check indexes
@@ -78,7 +78,7 @@ def test_connection():
                 for idx in indexes:
                     print(f"   - {idx.get('name', 'N/A')}")
             else:
-                print("   ⚠️  No indexes found! Run: python create_indexes.py")
+                print("   [WARNING]  No indexes found! Run: python create_indexes.py")
             
             # Test 5: Sample movies
             print("\n5️⃣ Sample movies in database...")
@@ -92,10 +92,10 @@ def test_connection():
                 print(f"   {i}. {movie['title']} (Rating: {movie['rating']})")
             
             print("\n" + "=" * 60)
-            print("✅ Diagnostic complete!")
+            print("[OK] Diagnostic complete!")
             
     except Exception as e:
-        print(f"\n❌ Error: {e}")
+        print(f"\n[ERROR] Error: {e}")
         import traceback
         traceback.print_exc()
     finally:

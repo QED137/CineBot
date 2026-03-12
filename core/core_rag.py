@@ -91,7 +91,7 @@ def ensure_clip_loaded():
         
         clip_load_attempted = True
         try:
-            logger.info(f"⏳ Loading CLIP processor and model on {DEVICE} (lazy load)...")
+            logger.info(f"Loading CLIP processor and model on {DEVICE} (lazy load)...")
             clip_processor = CLIPProcessor.from_pretrained(CLIP_MODEL_NAME_CONST)
             clip_model = CLIPModel.from_pretrained(CLIP_MODEL_NAME_CONST).to(DEVICE)
             logger.info(f"CLIP model '{CLIP_MODEL_NAME_CONST}' successfully loaded.")
@@ -479,7 +479,7 @@ def handle_vector_search(user_query: str, chat_history: List[Dict], top_k: int =
             LIMIT 15
             """
             try:
-                logger.info(f"⏳ Executing genre query for '{detected_genre}'...")
+                logger.info(f"Executing genre query for '{detected_genre}'...")
                 import signal
                 
                 def timeout_handler(signum, frame):
@@ -495,7 +495,7 @@ def handle_vector_search(user_query: str, chat_history: List[Dict], top_k: int =
                     # Cache the results for future queries
                     if genre_movies:
                         genre_cache.set(cache_key, genre_movies, params={"genre": detected_genre})
-                        logger.info(f"💾 Cached {len(genre_movies)} movies for genre '{detected_genre}'")
+                        logger.info(f"Cached {len(genre_movies)} movies for genre '{detected_genre}'")
                 except (AttributeError, ValueError):
                     # Windows doesn't support SIGALRM, fallback to no timeout
                     genre_movies = kg.query(cypher, params={"genre_name": detected_genre}) or []

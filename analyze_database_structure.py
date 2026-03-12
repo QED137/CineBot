@@ -115,15 +115,15 @@ with driver.session(database="neo4j") as session:
         index_name = record.get('name', '')
         if 'text' in index_name.lower() or 'tagline' in index_name.lower():
             has_text_index = True
-            print(f"  ✓ {index_name} (Text embeddings)")
+            print(f"  [OK] {index_name} (Text embeddings)")
         elif 'poster' in index_name.lower():
             has_poster_index = True
-            print(f"  ✓ {index_name} (Poster embeddings)")
+            print(f"  [OK] {index_name} (Poster embeddings)")
     
     if not has_text_index:
-        print(f"  ✗ No text embedding index found")
+        print(f"  [FAIL] No text embedding index found")
     if not has_poster_index:
-        print(f"  ✗ No poster embedding index found")
+        print(f"  [FAIL] No poster embedding index found")
     
     # Sample movie
     print("\n" + "="*70)

@@ -3,13 +3,13 @@
 
 set -e
 
-echo "🚀 CineBot Deployment Script"
-echo "=============================="
+echo "=== CineBot Deployment Script ==="
+echo "==============================="
 echo ""
 
 # Check if .env exists
 if [ ! -f .env ]; then
-    echo "❌ Error: .env file not found!"
+    echo "[ERROR] Error: .env file not found!"
     echo "Please copy .env.example to .env and fill in your API keys:"
     echo ""
     echo "  cp .env.example .env"
@@ -20,21 +20,21 @@ fi
 
 # Check if Docker is installed
 if ! command -v docker &> /dev/null; then
-    echo "❌ Error: Docker is not installed"
+    echo "[ERROR] Error: Docker is not installed!"
     echo "Install Docker: https://docs.docker.com/get-docker/"
     exit 1
 fi
 
 # Check if Docker Compose is installed
 if ! command -v docker-compose &> /dev/null; then
-    echo "❌ Error: Docker Compose is not installed"
+    echo "[ERROR] Error: Docker Compose is not installed!"
     echo "Install Docker Compose: https://docs.docker.com/compose/install/"
     exit 1
 fi
 
-echo "✅ Environment file found"
-echo "✅ Docker installed"
-echo "✅ Docker Compose installed"
+echo "[OK] Environment file found"
+echo "[OK] Docker installed"
+echo "[OK] Docker Compose installed"
 echo ""
 
 # Load environment variables
@@ -51,7 +51,7 @@ for var in "${REQUIRED_VARS[@]}"; do
 done
 
 if [ ${#MISSING_VARS[@]} -ne 0 ]; then
-    echo "❌ Error: Missing required environment variables:"
+    echo "[ERROR] Error: Missing required environment variables:"
     for var in "${MISSING_VARS[@]}"; do
         echo "  - $var"
     done
@@ -60,7 +60,7 @@ if [ ${#MISSING_VARS[@]} -ne 0 ]; then
     exit 1
 fi
 
-echo "✅ All required environment variables set"
+echo "[OK] All required environment variables set"
 echo ""
 
 # Ask for deployment mode
@@ -81,25 +81,25 @@ case $choice in
         docker-compose up -d --build
         
         echo ""
-        echo "⏳ Waiting for services to be ready..."
+        echo "[WAIT] Waiting for services to be ready..."
         sleep 10
         
         # Check health
         if curl -f -s http://localhost:8000/api/health > /dev/null; then
-            echo "✅ Backend is healthy!"
+            echo "[OK] Backend is healthy!"
         else
-            echo "⚠️  Backend health check failed"
+            echo "[WARNING] Backend health check failed"
         fi
         
         if curl -f -s http://localhost:80 > /dev/null; then
-            echo "✅ Frontend is accessible!"
+            echo "[OK] Frontend is accessible!"
         else
-            echo "⚠️  Frontend not accessible"
+            echo "[WARNING] Frontend not accessible"
         fi
         
         echo ""
         echo "=============================="
-        echo "🎉 Deployment Complete!"
+        echo "=== Deployment Complete! ==="
         echo "=============================="
         echo ""
         echo "Access your app at:"

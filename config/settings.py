@@ -76,10 +76,10 @@ import os
 # def main():
 #     print("Configuration loaded successfully.")
 #     from config import settings
-#     print("✅ OMDB_API loaded:", settings.OMDB_API)
+#     print("[OK] OMDB_API loaded:", settings.OMDB_API)
     
-#     print("✅ OMDB_API =", os.getenv("OMDB_API"))
-#     print("✅ All ENV keys:", list(os.environ.keys()))
+#     print("[OK] OMDB_API =", os.getenv("OMDB_API"))
+#     print("[OK] All ENV keys:", list(os.environ.keys()))
 
 
 # if __name__ == "__main__":

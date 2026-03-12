@@ -143,7 +143,7 @@ def enhance_movie(movie_info):
         updates.append("poster embedding")
     
     if not needs_update:
-        logger.info(f"  ✓ '{title}' - Already complete!")
+        logger.info(f"  [OK] '{title}' - Already complete!")
         return False
     
     logger.info(f"  Enhancing '{title}' - Adding: {', '.join(updates)}")
@@ -153,7 +153,7 @@ def enhance_movie(movie_info):
     if 'genres' in updates or 'director' in updates or 'actors' in updates:
         tmdb_data = fetch_movie_details_from_tmdb(tmdb_id)
         if not tmdb_data:
-            logger.warning(f"  ⚠ Could not fetch TMDB data for '{title}'")
+            logger.warning(f"  [WARNING] Could not fetch TMDB data for '{title}'")
             return False
         time.sleep(0.3)  # Rate limiting
     
@@ -241,7 +241,7 @@ def enhance_movie(movie_info):
         return True
         
     except Exception as e:
-        logger.error(f"  ✗ Error enhancing '{title}': {e}")
+        logger.error(f"  [FAIL] Error enhancing '{title}': {e}")
         return False
 
 def create_vector_indexes():
@@ -262,9 +262,9 @@ def create_vector_indexes():
                     `vector.similarity_function`: 'cosine'
                 }}
             """)
-            logger.info("  ✓ Text embedding index ready")
+            logger.info("  [OK] Text embedding index ready")
         except Exception as e:
-            logger.info(f"  ✓ Text index exists")
+            logger.info(f"  [OK] Text index exists")
         
         # Poster embedding index
         try:
@@ -277,9 +277,9 @@ def create_vector_indexes():
                     `vector.similarity_function`: 'cosine'
                 }}
             """)
-            logger.info("  ✓ Poster embedding index ready")
+            logger.info("  [OK] Poster embedding index ready")
         except Exception as e:
-            logger.info(f"  ✓ Poster index exists")
+            logger.info(f"  [OK] Poster index exists")
 
 def main():
     """Main function to enhance existing database"""
@@ -306,7 +306,7 @@ def main():
     logger.info(f"Movies already complete: {total_movies - len(movies_needing_work)}")
     
     if len(movies_needing_work) == 0:
-        logger.info("\n✓ All movies are already complete!")
+        logger.info("\n[OK] All movies are already complete!")
         close_driver()
         return
     

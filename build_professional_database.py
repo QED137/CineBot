@@ -240,7 +240,7 @@ def load_movie_to_neo4j(movie_data):
                         profile_path=actor.get("profile_path")
                     )
             
-            logger.info(f"  ✓ Loaded '{title}' with {len(genres)} genres, director, and {len(cast)} actors")
+            logger.info(f"  [OK] Loaded '{title}' with {len(genres)} genres, director, and {len(cast)} actors")
             
     except Exception as e:
         logger.error(f"Error loading movie {movie_data.get('title', 'Unknown')}: {e}")
@@ -263,7 +263,7 @@ def create_vector_indexes():
                     `vector.similarity_function`: 'cosine'
                 }}
             """)
-            logger.info("  ✓ Text embedding index created")
+            logger.info("  [OK] Text embedding index created")
         except Exception as e:
             logger.warning(f"Text index already exists or error: {e}")
         
@@ -278,7 +278,7 @@ def create_vector_indexes():
                     `vector.similarity_function`: 'cosine'
                 }}
             """)
-            logger.info("  ✓ Poster embedding index created")
+            logger.info("  [OK] Poster embedding index created")
         except Exception as e:
             logger.warning(f"Poster index already exists or error: {e}")
 
