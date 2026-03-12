@@ -115,7 +115,7 @@ services:
       dockerfile: Dockerfile.frontend
     container_name: cinebot-frontend
     ports:
-      - "80:80"
+      - "3000:80"
     depends_on:
       - backend
     deploy:
