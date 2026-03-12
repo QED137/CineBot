@@ -54,11 +54,16 @@ if hasattr(settings, 'NEO4J_URI'):
         )
         kg.refresh_schema() # Important for LangChain
         logger.info(f"Successfully connected to Neo4j and refreshed schema.")
+        logger.info(f"Neo4j schema: {kg.schema}")
     except Exception as e:
         logger.error(f"Failed to connect to Neo4j: {e}", exc_info=True)
+        kg = None
 else:
     logger.error("Neo4j URI not found in settings.")
-print(kg.schema)
+    kg = None
+
+if kg is None:
+    logger.warning("Neo4j is not available. Graph queries will not work.")
 
 
 # --- CLIP Model (Lazy Loading for faster startup) ---

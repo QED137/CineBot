@@ -7,6 +7,7 @@ import json
 import hashlib
 from typing import Optional, Any, Dict
 from datetime import timedelta
+from config import settings
 
 logger = logging.getLogger(__name__)
 
@@ -185,9 +186,27 @@ class RedisCache:
 
 
 # Global cache instances with Redis backend
-_genre_cache = RedisCache(ttl_seconds=3600, prefix='cinebot:genre')  # 1 hour
-_vector_cache = RedisCache(ttl_seconds=1800, prefix='cinebot:vector')  # 30 min
-_graph_cache = RedisCache(ttl_seconds=2700, prefix='cinebot:graph')  # 45 min
+_genre_cache = RedisCache(
+    host=settings.REDIS_HOST,
+    port=settings.REDIS_PORT,
+    db=settings.REDIS_DB,
+    ttl_seconds=3600,
+    prefix='cinebot:genre'
+)  # 1 hour
+_vector_cache = RedisCache(
+    host=settings.REDIS_HOST,
+    port=settings.REDIS_PORT,
+    db=settings.REDIS_DB,
+    ttl_seconds=1800,
+    prefix='cinebot:vector'
+)  # 30 min
+_graph_cache = RedisCache(
+    host=settings.REDIS_HOST,
+    port=settings.REDIS_PORT,
+    db=settings.REDIS_DB,
+    ttl_seconds=2700,
+    prefix='cinebot:graph'
+)  # 45 min
 
 
 def get_genre_cache() -> RedisCache:

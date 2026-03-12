@@ -8,6 +8,11 @@ NEO4J_USERNAME = os.getenv("NEO4J_USERNAME")
 NEO4J_PASSWORD = os.getenv("NEO4J_PASSWORD")
 NEO4J_DATABASE = os.getenv("NEO4J_DATABASE", "neo4j")
 HF_API_TOKEN = os.getenv("HF_TOKEN")
+
+# --- Redis Configuration ---
+REDIS_HOST = os.getenv("REDIS_HOST", "redis")  # Default to 'redis' for Docker Compose
+REDIS_PORT = int(os.getenv("REDIS_PORT", "6379"))
+REDIS_DB = int(os.getenv("REDIS_DB", "0"))
 # --- APIs ---
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
 TMDB_API_KEY = os.getenv("TMDB_API_KEY")
