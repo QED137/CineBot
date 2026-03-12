@@ -43,3 +43,19 @@ export function TypingIndicator() {
     </div>
   );
 }
+
+// Generic skeleton loader (default export)
+export default function SkeletonLoader({ height = "h-64", className = "" }) {
+  return (
+    <div className={`bg-slate-800/50 rounded-xl overflow-hidden border border-slate-700 animate-pulse ${height} ${className}`}>
+      <div className="p-4 space-y-3 h-full flex flex-col justify-between">
+        <div>
+          <div className="h-6 bg-slate-700/50 rounded w-3/4 mb-3"></div>
+          <div className="h-4 bg-slate-700/50 rounded w-full mb-2"></div>
+          <div className="h-4 bg-slate-700/50 rounded w-5/6"></div>
+        </div>
+        <div className="h-3 bg-slate-700/50 rounded w-1/2"></div>
+      </div>
+    </div>
+  );
+}

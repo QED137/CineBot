@@ -289,6 +289,91 @@ async def clear_cache():
     })
 
 
+@app.get("/api/articles")
+async def get_articles(
+    limit: int = 20,
+    source: Optional[str] = None,
+    search: Optional[str] = None
+):
+    """
+    Get articles from movie blogs
+    
+    Query params:
+    - limit: Maximum number of articles (default: 20)
+    - source: Filter by source (e.g., 'indiewire', 'collider')
+    - search: Search query for filtering articles
+    """
+    try:
+        from external_apis.rss_feed_client import get_rss_client
+        
+        rss_client = get_rss_client()
+        
+        if search:
+            articles = rss_client.search_articles(query=search, limit=limit)
+        else:
+            articles = rss_client.get_articles(limit=limit, source=source)
+        
+        return JSONResponse({
+            "articles": articles,
+            "count": len(articles),
+            "source": source,
+            "search": search
+        })
+        
+    except Exception as e:
+        logger.error(f"Error fetching articles: {e}", exc_info=True)
+        return JSONResponse({
+            "articles": [],
+            "count": 0,
+            "error": str(e)
+        }, status_code=500)
+
+
+@app.get("/api/articles/featured")
+async def get_featured_articles(count: int = 5):
+    """Get featured articles from top-tier sources"""
+    try:
+        from external_apis.rss_feed_client import get_rss_client
+        
+        rss_client = get_rss_client()
+        articles = rss_client.get_featured_articles(count=count)
+        
+        return JSONResponse({
+            "articles": articles,
+            "count": len(articles)
+        })
+        
+    except Exception as e:
+        logger.error(f"Error fetching featured articles: {e}", exc_info=True)
+        return JSONResponse({
+            "articles": [],
+            "count": 0,
+            "error": str(e)
+        }, status_code=500)
+
+
+@app.get("/api/articles/sources")
+async def get_article_sources():
+    """Get list of available article sources"""
+    try:
+        from external_apis.rss_feed_client import get_rss_client
+        
+        rss_client = get_rss_client()
+        sources = rss_client.get_sources()
+        
+        return JSONResponse({
+            "sources": sources,
+            "count": len(sources)
+        })
+        
+    except Exception as e:
+        logger.error(f"Error fetching sources: {e}", exc_info=True)
+        return JSONResponse({
+            "sources": [],
+            "error": str(e)
+        }, status_code=500)
+
+
 @app.post("/api/chat")
 async def handle_chat(
     request: Request,

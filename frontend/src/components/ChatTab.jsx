@@ -30,6 +30,32 @@ export default function ChatTab() {
   const abortControllerRef = useRef(null);
   const { addToast } = useToast();
 
+  // Load chat history from localStorage on mount
+  useEffect(() => {
+    try {
+      const savedHistory = localStorage.getItem('chatHistory');
+      if (savedHistory) {
+        const parsed = JSON.parse(savedHistory);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          setMessages(parsed);
+        }
+      }
+    } catch (e) {
+      console.error('Error loading chat history:', e);
+    }
+  }, []);
+
+  // Save chat history to localStorage whenever messages change
+  useEffect(() => {
+    if (messages.length > 0) {
+      try {
+        localStorage.setItem('chatHistory', JSON.stringify(messages));
+      } catch (e) {
+        console.error('Error saving chat history:', e);
+      }
+    }
+  }, [messages]);
+
   // Helper functions - define before keyboard shortcuts
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -51,6 +77,7 @@ export default function ChatTab() {
     setMessages([]);
     setInputValue('');
     clearImage();
+    localStorage.removeItem('chatHistory'); // Clear saved history
     addToast('Chat cleared', 'info');
   };
 
@@ -244,6 +271,16 @@ export default function ChatTab() {
       };
       
       setMessages(prev => [...prev, assistantMessage]);
+      
+      // Save recommended movies for Articles tab
+      if (data.movies && data.movies.length > 0) {
+        try {
+          localStorage.setItem('recommendedMovies', JSON.stringify(data.movies));
+          localStorage.setItem('recommendedMoviesTimestamp', Date.now().toString());
+        } catch (e) {
+          console.error('Error saving recommended movies:', e);
+        }
+      }
       
       // Show success toast
       if (data.meta?.has_movies && data.meta?.count > 0) {

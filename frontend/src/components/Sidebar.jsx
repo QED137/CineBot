@@ -1,5 +1,5 @@
 import { motion } from 'framer-motion';
-import { MessageCircle, CheckCircle, Image, Sparkles, ExternalLink, Film, Heart } from 'lucide-react';
+import { MessageCircle, CheckCircle, Image, Sparkles, ExternalLink, Film, ListOrdered, Newspaper } from 'lucide-react';
 
 export default function Sidebar({ activeTab, setActiveTab }) {
   const features = [
@@ -63,16 +63,35 @@ export default function Sidebar({ activeTab, setActiveTab }) {
           transition={{ delay: 0.25 }}
           whileHover={{ x: 4 }}
           whileTap={{ scale: 0.98 }}
-          onClick={() => setActiveTab('watchlist')}
+          onClick={() => setActiveTab('toplists')}
           className={`w-full flex items-center justify-between gap-3 px-4 py-3.5 rounded-xl transition-all group ${
-            activeTab === 'watchlist'
-              ? 'bg-gradient-to-r from-pink-600 to-red-600 text-white shadow-lg shadow-pink-500/30'
+            activeTab === 'toplists'
+              ? 'bg-gradient-to-r from-purple-600 to-pink-600 text-white shadow-lg shadow-purple-500/30'
               : 'text-slate-300 hover:bg-slate-700/50 hover:text-white'
           }`}
         >
           <div className="flex items-center gap-3">
-            <Heart className={`w-5 h-5 ${activeTab === 'watchlist' ? 'fill-current' : ''}`} />
-            <span className="font-medium">Watchlist</span>
+            <ListOrdered className="w-5 h-5" />
+            <span className="font-medium">10 Best Lists</span>
+          </div>
+        </motion.button>
+
+        <motion.button
+          initial={{ opacity: 0, x: -20 }}
+          animate={{ opacity: 1, x: 0 }}
+          transition={{ delay: 0.28 }}
+          whileHover={{ x: 4 }}
+          whileTap={{ scale: 0.98 }}
+          onClick={() => setActiveTab('articles')}
+          className={`w-full flex items-center justify-between gap-3 px-4 py-3.5 rounded-xl transition-all group ${
+            activeTab === 'articles'
+              ? 'bg-gradient-to-r from-blue-600 to-cyan-600 text-white shadow-lg shadow-blue-500/30'
+              : 'text-slate-300 hover:bg-slate-700/50 hover:text-white'
+          }`}
+        >
+          <div className="flex items-center gap-3">
+            <Newspaper className="w-5 h-5" />
+            <span className="font-medium">Articles</span>
           </div>
         </motion.button>
         

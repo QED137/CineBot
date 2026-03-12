@@ -47,4 +47,39 @@ export const chatAPI = {
   },
 };
 
+export const articlesAPI = {
+  // Get articles with optional filters
+  getArticles: async (limit = 20, source = null, search = null) => {
+    const params = new URLSearchParams();
+    params.append('limit', limit.toString());
+    if (source) params.append('source', source);
+    if (search) params.append('search', search);
+    
+    const response = await api.get(`/articles?${params}`);
+    return response.data;
+  },
+
+  // Get featured articles
+  getFeaturedArticles: async (count = 5) => {
+    const response = await api.get(`/articles/featured?count=${count}`);
+    return response.data;
+  },
+
+  // Get available article sources
+  getSources: async () => {
+    const response = await api.get('/articles/sources');
+    return response.data;
+  },
+
+  // Search articles by keyword
+  searchArticles: async (query, limit = 10) => {
+    const params = new URLSearchParams();
+    params.append('search', query);
+    params.append('limit', limit.toString());
+    
+    const response = await api.get(`/articles?${params}`);
+    return response.data;
+  },
+};
+
 export default api;

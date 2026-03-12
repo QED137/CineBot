@@ -1,6 +1,5 @@
 import { motion } from 'framer-motion';
-import { Star, Play, ExternalLink, Heart, Clock } from 'lucide-react';
-import { useState } from 'react';
+import { Star, Play, ExternalLink, Clock } from 'lucide-react';
 
 export default function MovieCard({ movie, index }) {
   const {
@@ -16,28 +15,9 @@ export default function MovieCard({ movie, index }) {
     release_date,
   } = movie;
 
-  const [isFavorite, setIsFavorite] = useState(
-    localStorage.getItem(`fav_${tmdb_id}`) === 'true'
-  );
-
   const posterImage = poster_url || 'https://via.placeholder.com/400x600.png?text=No+Poster';
   const rating = vote_average ? Number(vote_average).toFixed(1) : null;
   const year = release_date ? new Date(release_date).getFullYear() : null;
-
-  const toggleFavorite = () => {
-    const newState = !isFavorite;
-    setIsFavorite(newState);
-    if (tmdb_id) {
-      localStorage.setItem(`fav_${tmdb_id}`, newState.toString());
-      if (newState) {
-        // Save full movie data for watchlist
-        localStorage.setItem(`movie_${tmdb_id}`, JSON.stringify(movie));
-      } else {
-        // Remove movie data when unfavorited
-        localStorage.removeItem(`movie_${tmdb_id}`);
-      }
-    }
-  };
   
   return (
     <motion.div
@@ -47,19 +27,6 @@ export default function MovieCard({ movie, index }) {
       whileHover={{ y: -8, transition: { duration: 0.2 } }}
       className="group relative bg-gradient-to-br from-slate-800/80 to-slate-900/80 backdrop-blur-xl rounded-2xl overflow-hidden border border-slate-700/50 hover:border-indigo-500/50 transition-all duration-300 hover:shadow-2xl hover:shadow-indigo-500/20"
     >
-      {/* Favorite Button */}
-      <motion.button
-        whileTap={{ scale: 0.9 }}
-        onClick={toggleFavorite}
-        className="absolute top-3 right-3 z-10 p-2 rounded-full bg-black/50 backdrop-blur-sm border border-white/10 hover:bg-black/70 transition-all"
-      >
-        <Heart
-          className={`w-5 h-5 transition-all ${
-            isFavorite ? 'fill-red-500 text-red-500' : 'text-white'
-          }`}
-        />
-      </motion.button>
-
       <div className="relative">
         <img
           src={posterImage}
