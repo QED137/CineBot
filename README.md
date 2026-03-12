@@ -42,12 +42,102 @@ capabilities of LLMs, the system delivers contextually relevant and accurate rec
 
     ```
      pip install -r requirements.txt
-3. Set up your Neo4j database and .env file with credentials.
-4.  Run app:
-
+3. Set up your Neo4j database and .env file with credentials:
+   ```bash
+   cp .env.example .env
+   # Edit .env with your API keys
    ```
-    streamlit run app.py
+
+   **Option A: Use Local Neo4j (Recommended for Development)**
+   ```bash
+   # Start local Neo4j + Redis with Docker
+   ./start-local-dev.sh
+   
+   # Use local config
+   cp .env.local .env
+   
+   # Access Neo4j Browser: http://localhost:7474
+   # Login: neo4j / cinebot123
+   ```
+   
+   **Option B: Use Neo4j Aura (Cloud)**
+   - Sign up at https://neo4j.com/cloud/aura/
+   - Add connection details to `.env`
+
+4. Start Redis (if not using Docker):
+   ```bash
+   sudo service redis-server start
+   ```
+
+5. Run the FastAPI backend:
+   ```bash
+   uvicorn app_fastapi:app --reload
+   ```
+
+6. Run the React frontend (in a new terminal):
+   ```bash
+   cd frontend
+   npm install
+   npm run dev
+   ```
+
+7. Access the app at http://localhost:3000
+
+---
+
+## 🏠 **Local Development (No Cloud Needed!)**
+
+Run everything locally with Docker - **no more daily Neo4j Aura restarts!**
+
+```bash
+# One command to start Neo4j + Redis
+./start-local-dev.sh
+
+# See full guide
+cat LOCAL_NEO4J_SETUP.md
 ```
+
+**Benefits:**
+- ✅ No daily manual restarts (Aura free tier limitation)
+- ✅ Better performance on your hardware (6 CPU, 12GB RAM)
+- ✅ Always available, no internet required
+- ✅ Full control over database configuration
+
+---
+
+## 🚀 **Cloud Deployment**
+
+Deploy CineBot to the cloud in minutes! See our deployment guides:
+
+- **[Strato Server Guide](DEPLOY_STRATO.md)** - Deploy to your Strato VPS (if you have SSH access) - **FREE!**
+- **[Quick Start Guide](DEPLOY_QUICK_START.md)** - Deploy in 5 minutes with Railway
+- **[Full Deployment Guide](DEPLOYMENT.md)** - All cloud platforms (AWS, Azure, GCP, Railway, Render, Vercel)
+
+### Deploy with Docker:
+```bash
+./deploy.sh
+```
+
+### Deploy to Strato (if you have VPS):
+1. SSH to your server
+2. Install Docker
+3. Clone repo and run: `docker-compose up -d --build`
+4. See [DEPLOY_STRATO.md](DEPLOY_STRATO.md) for full guide
+
+### One-Click Deploy to Railway:
+1. Push to GitHub
+2. Import to [Railway.app](https://railway.app)
+3. Add environment variables
+4. Done! 🎉
+
+---
+
+## 📚 Documentation
+
+- [Architecture Overview](ARCHITECTURE.md)
+- [FastAPI Migration](FASTAPI_MIGRATION.md)
+- [Redis Setup](REDIS_SETUP.md)
+- [Production Optimization](PRODUCTION_OPTIMIZATION.md)
 # Use cases :
  * Personalized Movie Recommendations: Find movies similar to your favorites.
  * Knowledge Retrieval: Ask movie-related questions like "Who directed Inception?" or "What movies came out after 2010?"
