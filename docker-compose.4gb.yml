@@ -24,7 +24,6 @@ services:
       - NEO4J_dbms_memory_pagecache_size=512M
       # Performance tuning for low memory
       - NEO4J_dbms_tx__state_memory__allocation=ON_HEAP
-      - NEO4J_dbms_memory_transaction_total__max=256M
     volumes:
       - neo4j_data:/data
       - neo4j_logs:/logs
