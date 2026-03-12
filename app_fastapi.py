@@ -218,12 +218,8 @@ def render_movie_card_html(rec, index):
 
 # --- Routes ---
 
-@app.get("/", response_class=HTMLResponse)
-async def index(request: Request):
-    """Serve the main HTML page"""
-    # Clear session
-    request.session.clear()
-    return templates.TemplateResponse("index.html", {"request": request})
+# NOTE: "/" route removed - React frontend handles the UI
+# Backend only serves API endpoints under /api/
 
 
 @app.get("/api/suggestion")
