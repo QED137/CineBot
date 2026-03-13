@@ -2,10 +2,6 @@
 
 CineBot is a graph-powered movie recommendation and discovery application built with FastAPI, React, Neo4j, and OpenAI. It supports conversational movie search, poster-based discovery, and curated film reading content from major movie blogs.
 
-<p align="center">
-   <img src="./photos/newmediacinebot.png" width="720" alt="CineBot Screenshot">
-</p>
-
 ## What this project does
 
 - Conversational movie recommendations with context-aware responses
