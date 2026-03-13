@@ -1,0 +1,45 @@
+# Render deployment configuration
+services:
+  # FastAPI Backend
+  - type: web
+    name: cinebot-backend
+    env: python
+    region: oregon
+    plan: starter
+    buildCommand: pip install -r requirements.txt
+    startCommand: uvicorn app_fastapi:app --host 0.0.0.0 --port $PORT
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.11.0
+      - key: REDIS_HOST
+        fromService:
+          type: redis
+          name: cinebot-redis
+          property: host
+      - key: REDIS_PORT
+        fromService:
+          type: redis
+          name: cinebot-redis
+          property: port
+    healthCheckPath: /api/health
+  
+  # Redis Cache
+  - type: redis
+    name: cinebot-redis
+    region: oregon
+    plan: starter
+    maxmemoryPolicy: allkeys-lru
+  
+  # Frontend
+  - type: web
+    name: cinebot-frontend
+    env: static
+    region: oregon
+    buildCommand: cd frontend && npm install && npm run build
+    staticPublishPath: ./frontend/dist
+    envVars:
+      - key: VITE_API_URL
+        fromService:
+          type: web
+          name: cinebot-backend
+          envVarKey: RENDER_EXTERNAL_URL

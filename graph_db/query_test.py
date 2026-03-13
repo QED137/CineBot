@@ -59,7 +59,7 @@ def create_vector_indexes() -> None:
     FOR (m:Movie) ON (m.posterEmbedding)
     OPTIONS {indexConfig: {`vector.dimensions`: 512, `vector.similarity_function`: 'cosine'}}
     """)
-    logger.info("✅ Vector indexes created/verified.")
+    logger.info("[OK] Vector indexes created/verified.")
 
 # --- Embedding Generation ---
 def generate_tagline_embeddings() -> None:
@@ -73,7 +73,7 @@ def generate_tagline_embeddings() -> None:
     ) AS embedding
     SET m.taglineEmbedding = embedding
     """, params={"apiKey": OPENAI_API_KEY, "endpoint": OPENAI_ENDPOINT})
-    logger.info("✅ Tagline embeddings generated.")
+    logger.info("[OK] Tagline embeddings generated.")
 
 # def generate_image_embedding(image_url: str) -> Optional[List[float]]:
 #     try:
@@ -88,7 +88,7 @@ def generate_tagline_embeddings() -> None:
 
 #         return embeddings[0].tolist()
 #     except Exception as e:
-#         logger.error(f"❌ Failed to generate image embedding: {e}")
+#         logger.error(f"[ERROR] Failed to generate image embedding: {e}")
 #         return None
 
 
@@ -134,7 +134,7 @@ the database has link for poster and trailor
 #     MERGE (m:Movie {title: $title})
 #     ON CREATE SET m.created = timestamp()
 #     """, params={"title": title})
-#     logger.info(f"✅ Movie '{title}' ensured in DB.")
+#     logger.info(f"[OK] Movie '{title}' ensured in DB.")
 
 #     # Fetch OMDB data
 #     try:
@@ -167,7 +167,7 @@ the database has link for poster and trailor
 #         "posterVec": embedding,
 #         "tagline": tagline
 #     })
-#     logger.info(f"✅ Poster and embedding updated for '{title}'.")
+#     logger.info(f"[OK] Poster and embedding updated for '{title}'.")
 
 ### new poster embbedding fucntion poster link is taken for the databse itself
 def generate_image_embedding(kg: Neo4jGraph, tmdb_id: int) -> Optional[List[float]]:
@@ -198,7 +198,7 @@ def generate_image_embedding(kg: Neo4jGraph, tmdb_id: int) -> Optional[List[floa
         return embeddings[0].tolist()
 
     except Exception as e:
-        logger.error(f"❌ Failed to generate image embedding for movie {tmdb_id}: {e}")
+        logger.error(f"[ERROR] Failed to generate image embedding for movie {tmdb_id}: {e}")
         return None
 
 
@@ -214,13 +214,13 @@ def print_movie_embeddings(title: str):
     """, params={"title": title})
 
     if not result:
-        logger.warning(f"⚠️ Movie '{title}' not found in Neo4j.")
+        logger.warning(f"[WARNING] Movie '{title}' not found in Neo4j.")
         return
 
     movie = result[0]
-    print(f"🎬 Movie: {movie['title']}")
-    print(f"🖼️ Poster Embedding (first 10 dims): {movie['posterVec'][:10] if movie['posterVec'] else '❌ Not available'}")
-    print(f"💬 Tagline Embedding (first 10 dims): {movie['taglineVec'][:10] if movie['taglineVec'] else '❌ Not available'}")
+    print(f"Movie: Movie: {movie['title']}")
+    print(f"Poster: Poster Embedding (first 10 dims): {movie['posterVec'][:10] if movie['posterVec'] else '[ERROR] Not available'}")
+    print(f"Tagline: Tagline Embedding (first 10 dims): {movie['taglineVec'][:10] if movie['taglineVec'] else '[ERROR] Not available'}")
 
 def testing_image_embedding():
     device = "cuda" if torch.cuda.is_available() else "cpu"
@@ -243,7 +243,7 @@ def testing_image_embedding():
 ##the folloing function is testing the simirlyty finidng on the basis of input image vector embeddings
 def searching_movie_like_input(vector):
     if not vector or not isinstance(vector, list):
-        raise ValueError("❌ Embedding must be a non-empty list.")
+        raise ValueError("[ERROR] Embedding must be a non-empty list.")
 
     query = """
     CALL db.index.vector.queryNodes('movie_poster_embeddings', $topK, $embedding)
@@ -268,17 +268,17 @@ def main():
 
     # trailer_key = get_trailer_key(27205)
     # if trailer_key:
-    #     print(f"🎬 Trailer: https://www.youtube.com/watch?v={trailer_key}")
+    #     print(f"Movie: Trailer: https://www.youtube.com/watch?v={trailer_key}")
 
     # print_movie_embeddings("Titanic")
     vec = testing_image_embedding()
     if vec:
-        print("✅ Image embedding generated.")
+        print("[OK] Image embedding generated.")
         results = searching_movie_like_input(vec)
         for movie in results:
             print(f"{movie['title']} (score: {movie['score']:.3f})")
     else:
-        print("❌ Embedding was None.")
+        print("[ERROR] Embedding was None.")
     
     
     # print("Trying to write to the database")

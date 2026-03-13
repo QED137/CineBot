@@ -172,9 +172,9 @@ NEO4J_PASSWORD = settings.NEO4J_PASSWORD
 OPENAI_API_KEY = settings.OPENAI_API_KEY
 OPENAI_ENDPOINT = settings.OPENAI_ENDPOINT
 TMDB_API_KEY = settings.TMDB_API_KEY
-OMDB_API = settings.OMDB_API
+OMDB_API = getattr(settings, 'OMDB_API_KEY', None) or getattr(settings, 'OMDB_API', None)
 BASE_URL = "https://api.themoviedb.org/3"
-OMDB_URL = f"http://www.omdbapi.com/?apikey={OMDB_API}&"
+OMDB_URL = f"http://www.omdbapi.com/?apikey={OMDB_API}&" if OMDB_API else ""
 
 # --- Load CLIP Model (Global) ---
 clip_model = CLIPModel.from_pretrained("openai/clip-vit-base-patch32")
@@ -203,7 +203,7 @@ def create_vector_indexes() -> None:
     FOR (m:Movie) ON (m.posterEmbedding)
     OPTIONS {indexConfig: {`vector.dimensions`: 512, `vector.similarity_function`: 'cosine'}}
     """)
-    logger.info("✅ Vector indexes created/verified.")
+    logger.info("[OK] Vector indexes created/verified.")
 
 # --- Embedding Generation ---
 def generate_tagline_embeddings() -> None:
@@ -252,7 +252,7 @@ def generate_tagline_embeddings() -> None:
         )
 
         embedded_count = result[0]['embedded_count'] if result and result[0] and result[0]['embedded_count'] is not None else 0
-        logger.info(f"✅ Tagline embeddings generation: {embedded_count} movies processed successfully in this run.")
+        logger.info(f"[OK] Tagline embeddings generation: {embedded_count} movies processed successfully in this run.")
 
         if embedded_count < candidate_count:
             logger.warning(f"Not all candidates ({candidate_count}) were embedded. {candidate_count - embedded_count} may have failed in GenAI or were filtered. Check Neo4j debug.log.")
@@ -318,11 +318,11 @@ def generate_batch_image_embeddings_revised(movie_posters: List[Dict]) -> List[D
                 embedding = features[0].cpu().tolist()
             logger.debug(f"Successfully generated embedding for movie ID: {movie_id}")
         except requests.exceptions.RequestException as req_e:
-            logger.warning(f"⚠️ Movie {movie_id} (URL: {image_url}) failed due to request error: {req_e}")
+            logger.warning(f"[WARNING] Movie {movie_id} (URL: {image_url}) failed due to request error: {req_e}")
         except UnidentifiedImageError: # Specific PIL error
-             logger.warning(f"⚠️ Movie {movie_id} (URL: {image_url}) failed: Could not identify image file.")
+             logger.warning(f"[WARNING] Movie {movie_id} (URL: {image_url}) failed: Could not identify image file.")
         except Exception as e:
-            logger.warning(f"⚠️ Movie {movie_id} (URL: {image_url}) failed during embedding generation: {type(e).__name__} - {e}")
+            logger.warning(f"[WARNING] Movie {movie_id} (URL: {image_url}) failed during embedding generation: {type(e).__name__} - {e}")
         finally:
             results.append({"movieId": movie_id, "embedding": embedding})
 
@@ -388,7 +388,7 @@ def embed_all_posters_in_chunks_dynamic(kg: Neo4jGraph, batch_size: int = 50): #
         movies_to_process_this_batch = get_poster_urls_batch(kg, skip=0, limit=batch_size) # Fetch from the start of the *remaining* list
 
         if not movies_to_process_this_batch:
-            logger.info("✅ No more movies found needing poster embeddings. Process complete.")
+            logger.info("[OK] No more movies found needing poster embeddings. Process complete.")
             break # Exit the loop if no movies are returned
 
         logger.info(f"Fetched {len(movies_to_process_this_batch)} movie posters for the current batch.")
@@ -420,7 +420,7 @@ def embed_all_posters_in_chunks_dynamic(kg: Neo4jGraph, batch_size: int = 50): #
         except Exception as e:
             logger.error(f"Error writing to resume file '{resume_file}': {e}")
 
-        logger.info(f"✅ Completed batch. Movies processed in this batch: {num_in_batch}. Total successfully embedded this run: {total_embedded_this_run}. Total attempted across all runs: {movies_processed_so_far}")
+        logger.info(f"[OK] Completed batch. Movies processed in this batch: {num_in_batch}. Total successfully embedded this run: {total_embedded_this_run}. Total attempted across all runs: {movies_processed_so_far}")
 
         # No explicit `current_skip += batch_size` is needed here because the `get_poster_urls_batch`
         # with `skip=0` and `WHERE m.poster_embedding IS NULL` will always fetch the *next*
@@ -441,13 +441,13 @@ def print_movie_embeddings(title: str):
     """, params={"title": title})
 
     if not result:
-        logger.warning(f"⚠️ Movie '{title}' not found in Neo4j.")
+        logger.warning(f"[WARNING] Movie '{title}' not found in Neo4j.")
         return
 
     movie = result[0]
-    print(f"🎬 Movie: {movie['title']}")
-    print(f"🖼️ Poster Embedding (first 10 dims): {movie['posterVec'][:10] if movie['posterVec'] else '❌ Not available'}")
-    print(f"💬 Tagline Embedding (first 10 dims): {movie['taglineVec'][:10] if movie['taglineVec'] else '❌ Not available'}")
+    print(f"Movie: Movie: {movie['title']}")
+    print(f"Poster: Poster Embedding (first 10 dims): {movie['posterVec'][:10] if movie['posterVec'] else '[ERROR] Not available'}")
+    print(f"Tagline: Tagline Embedding (first 10 dims): {movie['taglineVec'][:10] if movie['taglineVec'] else '[ERROR] Not available'}")
 
 # --- Main Workflow ---
 def main():
@@ -457,7 +457,7 @@ def main():
 
     # trailer_key = get_trailer_key(27205)
     # if trailer_key:
-    #     print(f"🎬 Trailer: https://www.youtube.com/watch?v={trailer_key}")
+    #     print(f"Movie: Trailer: https://www.youtube.com/watch?v={trailer_key}")
 
     # print_movie_embeddings("Titanic")
     #print("Trying to write to the database")

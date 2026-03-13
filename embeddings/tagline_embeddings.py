@@ -163,7 +163,7 @@ def generate_taglines_in_batches_with_delay(
         candidate_ids = get_candidate_movies_for_tagline_embedding_batch(kg_conn, limit=batch_size)
 
         if not candidate_ids:
-            logger.info("✅ No more movies found requiring tagline embeddings. Process complete.")
+            logger.info("[OK] No more movies found requiring tagline embeddings. Process complete.")
             break
 
         logger.info(f"Fetched {len(candidate_ids)} movie IDs for tagline embedding batch #{batch_num}.")
@@ -176,7 +176,7 @@ def generate_taglines_in_batches_with_delay(
         )
         total_movies_processed_successfully += successfully_embedded_in_batch
 
-        logger.info(f"✅ Tagline Batch #{batch_num} completed. Successfully embedded: {successfully_embedded_in_batch}. "
+        logger.info(f"[OK] Tagline Batch #{batch_num} completed. Successfully embedded: {successfully_embedded_in_batch}. "
                     f"Total successfully embedded so far: {total_movies_processed_successfully}.")
 
         # No resume file needed here in the same way as posters, because each batch

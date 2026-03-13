@@ -1,433 +1,355 @@
-# app.py
-import streamlit as st
-from PIL import Image
-import io # For handling image bytes
-import re # For parsing LLM output
-from typing import List, Dict, Optional # For type hinting
-from utils.poster_filter import is_valid_movie_poster
-#from utils.create_streamlit_env import write_streamlit_secrets_from_env
-
-#write_streamlit_secrets_from_env()
-
-# Import your RAG functions and logger from rag_core.py
-# Make sure core/core_rag.py has the RAG functions that return a tuple:
-# (llm_explanation_text, initial_retrieved_movies)
-# Mocking the import if core_rag is not available for testing
 import os
-os.environ["STREAMLIT_WATCHER_TYPE"] = "none"
+import io
+import re
+import random
+import logging
+import html
+import json
+
+from flask import Flask, request, jsonify, render_template, session
+from flask_cors import CORS
+from werkzeug.utils import secure_filename
+from dotenv import load_dotenv
+from flask_session import Session
+
+from core.core_rag import process_query, logger
 
 
-try:
-    from core.core_rag import recommend_by_text, recommend_by_poster_image, logger
-except ImportError:
-    import logging
-    logger = logging.getLogger(__name__)
-    logging.basicConfig(level=logging.INFO)
-    def mock_recommendation(query_or_bytes, top_k_retrieval=3, num_recommendations=2):
-        logger.info(f"Mock recommendation called with: {type(query_or_bytes)}")
-        mock_movies = [
-            {"title": f"Mock Movie {i+1}", "explanation": "This is a great mock movie because reasons.",
-             "poster_url": f"https://picsum.photos/seed/{i+1}/200/300",
-             "trailer_url": "https://www.youtube.com/watch?v=dQw4w9WgXcQ", # Placeholder
-             "tagline": f"An amazing tagline for movie {i+1}",
-             "overview": f"A detailed overview of the spectacular mock movie {i+1}. It involves adventure and excitement.",
-             "tmdb_id": f"mock_tmdb_{i+1}"}
-            for i in range(num_recommendations)
-        ]
-        llm_response = "\n\n".join([f"MOVIE: {m['title']}\nEXPLANATION: {m['explanation']}" for m in mock_movies])
-        return llm_response, mock_movies # Return LLM text and detailed list
-
-    recommend_by_text = mock_recommendation
-    recommend_by_poster_image = mock_recommendation
-    logger.warning("Using MOCK RAG functions as core.core_rag was not found.")
+# --- Load environment variables ---
+load_dotenv()
 
 
-import os
-os.environ['CUDA_VISIBLE_DEVICES'] = '-1'  # Force CPU usage - Keep if needed
+# --- Flask app setup ---
+app = Flask(__name__, template_folder="templates", static_folder="static")
+app.config["MAX_CONTENT_LENGTH"] = 16 * 1024 * 1024  # 16 MB upload limit
 
-# --- Page Configuration ---
+# Secret key for signing sessions (comes from /opt/cinebot/.env)
+app.config["SECRET_KEY"] = os.getenv("FLASK_SECRET_KEY", "INSECURE-DEV-SECRET")
 
-st.set_page_config(
-    page_title="CineBot - AI Movie Recommender",
-    page_icon="🤖",
-    layout="wide",
-    initial_sidebar_state="expanded"
-)
-st.markdown(
+# --- CORS Configuration for React Frontend ---
+CORS(app, resources={
+    r"/api/*": {
+        "origins": ["http://localhost:3000", "http://localhost:5173"],
+        "methods": ["GET", "POST", "OPTIONS"],
+        "allow_headers": ["Content-Type"],
+        "supports_credentials": True
+    }
+})
+
+# --- Server-side session config (Flask-Session) ---
+app.config["SESSION_TYPE"] = "filesystem"
+app.config["SESSION_FILE_DIR"] = os.path.join(os.path.dirname(__file__), "flask_session")
+app.config["SESSION_PERMANENT"] = False
+app.config["SESSION_COOKIE_HTTPONLY"] = True
+app.config["SESSION_COOKIE_SECURE"] = False  # Set to True only when using HTTPS in production
+app.config["SESSION_COOKIE_SAMESITE"] = "Lax"
+
+Session(app)
+# --------------------------------------------------
+
+
+# --- Suggestion prompts for the UI ---
+SUGGESTION_PROMPTS = [
+    "A gritty detective story set in a neon-drenched futuristic city.",
+    "An uplifting animated film about an unlikely friendship.",
+    "A mind-bending psychological thriller where reality is not what it seems.",
+    "A hilarious comedy about a group of friends on a chaotic road trip.",
+    "An epic historical drama about a forgotten leader who changed the world.",
+    "A tense survival movie about being stranded in a remote wilderness.",
+    "A charming romantic comedy with witty dialogue and a twist.",
+    "A visually stunning fantasy adventure with dragons and ancient magic.",
+]
+
+
+# --- Helpers to parse and render recommendations ---
+
+def parse_llm_recommendations(llm_text_response: str):
     """
-    <style>
-    .marquee-container {
-        height: 42px;
-        overflow: hidden;
-        position: relative;
-        background: rgba(15, 12, 41, 0.8);
-        border-radius: 10px;
-        border: 1px solid rgba(249, 203, 40, 0.3);
-        box-shadow: 0 0 12px rgba(249, 203, 40, 0.1);
-        backdrop-filter: blur(6px);
-        padding-left: 10px;
-        margin-bottom: 1.5rem;
-    }
+    Parse structured LLM output of the form:
 
-    .marquee-text {
-        position: absolute;
-        width: 100%;
-        height: 100%;
-        margin: 0;
-        line-height: 42px;
-        font-size: 15px;
-        font-family: 'Segoe UI', sans-serif;
-        font-weight: 500;
-        background: linear-gradient(90deg, #f9cb28, #ff9d00, #f9cb28);
-        -webkit-background-clip: text;
-        -webkit-text-fill-color: transparent;
-        text-shadow: 0 0 8px rgba(249, 203, 40, 0.3);
-        animation: scrollLeft 20s linear infinite;
-    }
+        MOVIE: Title
+        EXPLANATION: Some text
 
-    @keyframes scrollLeft {
-        0%   { transform: translateX(100%); }
-        100% { transform: translateX(-100%); }
-    }
-    </style>
-
-    <div class="marquee-container">
-        <p class="marquee-text">
-        This app runs on Neo4j Free Tier and public APIs — Performance may vary!!
-        </p>
-    </div>
-    """,
-    unsafe_allow_html=True
-)
-# --- Custom CSS Styling ---
-st.markdown("""
-<style>
-    /* Main container styling */
-    .stApp {
-        background: linear-gradient(135deg, #0f0c29, #302b63, #24243e);
-        color: #ffffff;
-    }
+    Falls back to a single "CineBot's Thoughts" card if not structured.
+    """
+    # Handle None or empty responses
+    if not llm_text_response:
+        logger.warning("LLM response is None or empty")
+        return [{"title": "CineBot", "explanation": "I couldn't generate a proper response. Please try again."}]
     
-    /* Sidebar styling */
-    [data-testid="stSidebar"] {
-        background: rgba(15, 12, 41, 0.8) !important;
-        border-right: 1px solid #444;
-    }
-    
-    /* Button styling */
-    .stButton>button {
-        background: linear-gradient(90deg, #ff4d4d, #f9cb28);
-        color: white;
-        border: none;
-        border-radius: 8px;
-        padding: 0.5rem 1rem;
-        font-weight: 600;
-        transition: all 0.3s ease;
-    }
-    
-    .stButton>button:hover {
-        transform: translateY(-2px);
-        box-shadow: 0 4px 15px rgba(249, 203, 40, 0.4);
-    }
-    
-    /* Card styling */
-    .movie-card {
-        background: rgba(255, 255, 255, 0.1);
-        backdrop-filter: blur(10px);
-        border-radius: 12px;
-        padding: 1.5rem;
-        transition: all 0.3s ease;
-        height: 100%;
-        display: flex;
-        flex-direction: column;
-    }
-    
-    .movie-card:hover {
-        transform: translateY(-5px);
-        box-shadow: 0 10px 25px rgba(0, 0, 0, 0.3);
-    }
-    
-    /* Tab styling */
-    [data-testid="stTab"] {
-        background: transparent !important;
-    }
-    
-    /* Text input styling */
-    .stTextArea textarea {
-        background: rgba(255, 255, 255, 0.1) !important;
-        color: white !important;
-    }
-    
-    /* Header styling */
-    h1, h2, h3,h4, h5, h6 {
-        color: #f9cb28 !important;
-    }
-</style>
-""", unsafe_allow_html=True)
-
-# --- App Header ---
-st.markdown("""
-<div style="text-align: center; margin-bottom: 2rem;">
-    <h1 style="font-size: 2.5rem; margin-bottom: 0.5rem;"> CineBot – AI Movie Recommender</h1>
-    <p style="font-size: 1rem; color: #ccc; max-width: 700px; margin: 0 auto;">
-      Neo4j • OpenAI • CLIP • Vector Search • Multimodal Retrieval
-    </p>
-</div>
-""", unsafe_allow_html=True)
-
-#st.caption("Discover movies using text descriptions or poster images!")
-
-# --- Session State ---
-if 'text_recommendations_detailed' not in st.session_state:
-    st.session_state.text_recommendations_detailed = []
-if 'image_recommendations_detailed' not in st.session_state:
-    st.session_state.image_recommendations_detailed = []
-if 'last_text_query' not in st.session_state:
-    st.session_state.last_text_query = ""
-if 'last_image_filename' not in st.session_state:
-    st.session_state.last_image_filename = ""
-
-# --- Helper function to parse LLM output ---
-def parse_llm_recommendations(llm_text_response: str) -> List[Dict]:
     recommendations = []
-    pattern = re.compile(r"MOVIE:\s*(.*?)\s*\n\s*EXPLANATION:\s*(.*?)(?=\n\nMOVIE:|\Z)", re.DOTALL | re.IGNORECASE)
+    pattern = re.compile(
+        r"MOVIE:\s*(.*?)\s*\n\s*EXPLANATION:\s*(.*?)(?=\n\nMOVIE:|\Z)",
+        re.DOTALL | re.IGNORECASE,
+    )
     matches = pattern.findall(llm_text_response)
 
-    for match in matches:
-        title = match[0].strip()
-        explanation = match[1].strip()
-        recommendations.append({"title": title, "explanation": explanation})
+    # Handle direct answers from graph search or plain Q&A
+    if not matches and llm_text_response:
+        non_rec_starters = [
+            "who directed",
+            "the director of",
+            "was released",
+            "stars",
+            "is a movie",
+        ]
+        if any(llm_text_response.lower().strip().startswith(s) for s in non_rec_starters):
+            return [{"title": "CineBot's Answer", "explanation": llm_text_response}]
 
-    if not recommendations and llm_text_response and "I'm sorry" not in llm_text_response and "I couldn't find" not in llm_text_response:
-        logger.warning("LLM response was not in the expected structured format. Displaying as raw text.")
+        # Fallback: just show raw text in a card
+        logger.warning("LLM response not in structured format. Displaying as raw text.")
         return [{"title": "CineBot's Thoughts", "explanation": llm_text_response}]
+
+    for title, explanation in matches:
+        recommendations.append(
+            {
+                "title": title.strip(),
+                "explanation": explanation.strip(),
+            }
+        )
     return recommendations
 
-# --- Helper to map LLM recommended titles back to fully detailed retrieved movies ---
-def map_llm_recs_to_retrieved_details(
-    llm_parsed_recommendations: List[Dict],
-    initially_retrieved_movies: List[Dict]
-) -> List[Dict]:
-    detailed_recommendations = []
-    if not initially_retrieved_movies:
-        logger.warning("No initially retrieved movies to map LLM recommendations to.")
-        return [{"title": rec.get("title"), "explanation": rec.get("explanation")} for rec in llm_parsed_recommendations]
 
-    retrieved_lookup = {movie.get('title','').lower().strip(): movie for movie in initially_retrieved_movies}
+def map_llm_recs_to_retrieved_details(llm_parsed_recs, retrieved_movies):
+    """
+    Map LLM-chosen titles back to the retrieved movie metadata (poster, trailer, etc.).
+    """
+    if not llm_parsed_recs:
+        return []
+    
+    if not retrieved_movies:
+        return llm_parsed_recs
 
-    for llm_rec in llm_parsed_recommendations:
-        llm_title_lower = llm_rec.get('title','').lower().strip()
-        matched_movie_data = retrieved_lookup.get(llm_title_lower)
+    detailed_recs = []
+    retrieved_lookup = {
+        (movie.get("title") or "").lower().strip(): movie
+        for movie in retrieved_movies
+        if movie.get("title")
+    }
 
-        if matched_movie_data:
-            detailed_rec = {
-                "title": matched_movie_data.get('title'),
-                "explanation": llm_rec.get('explanation'),
-                "poster_url": matched_movie_data.get('poster_url'),
-                "trailer_url": matched_movie_data.get('trailer_url'),
-                "tagline": matched_movie_data.get('tagline'),
-                "overview": matched_movie_data.get('overview'),
-                "tmdb_id": matched_movie_data.get('tmdb_id')
-            }
-            detailed_recommendations.append(detailed_rec)
+    for llm_rec in llm_parsed_recs:
+        llm_title_lower = (llm_rec.get("title") or "").lower().strip()
+        matched_data = retrieved_lookup.get(llm_title_lower)
+
+        if matched_data:
+            detailed_recs.append(
+                {
+                    "title": matched_data.get("title"),
+                    "explanation": llm_rec.get("explanation"),
+                    "poster_url": matched_data.get("poster_url"),
+                    "trailer_url": matched_data.get("trailer_url"),
+                    "tagline": matched_data.get("tagline"),
+                    "overview": matched_data.get("overview"),
+                    "tmdb_id": matched_data.get("tmdb_id"),
+                }
+            )
         else:
-            logger.warning(f"Could not map LLM recommended title '{llm_rec.get('title')}' back to full details.")
-            detailed_recommendations.append({
-                "title": llm_rec.get("title"),
-                "explanation": llm_rec.get("explanation"),
-                "poster_url": None,
-                "trailer_url": None
-            })
-    return detailed_recommendations
+            logger.warning(
+                f"Could not map LLM title '{llm_rec.get('title')}' to details."
+            )
+            detailed_recs.append(
+                {
+                    "title": llm_rec.get("title"),
+                    "explanation": llm_rec.get("explanation"),
+                }
+            )
 
-# --- Function to display recommendations as cards (MODIFIED FOR COMPACTNESS) ---
-def display_recommendation_cards_v2(detailed_recommendations: List[Dict]):
-    if not detailed_recommendations:
-        return
-    st.markdown("""
-    <style>
-    .movie-card {
-        background-color: #111;
-        padding: 1rem;
-        border-radius: 15px;
-        box-shadow: 0px 0px 10px rgba(255,255,255,0.1);
-        text-align: center;
-        transition: transform 0.2s ease;
-        margin-bottom: 1.5rem;
-    }
-    .movie-card:hover {
-        transform: scale(1.05);
-        box-shadow: 0px 0px 20px rgba(255,255,255,0.3);
-    }
-    .movie-title {
-        color: white;
-        font-size: 1.1rem;
-        margin: 0.4rem 0;
-    }
-    .movie-tagline {
-        color: #ccc;
-        font-size: 0.9rem;
-        margin-bottom: 0.4rem;
-    }
-    img {
-        border-radius: 10px;
-    }
-    </style>
-""", unsafe_allow_html=True)
-    cols_per_row = st.session_state.get('cols_per_row_slider', 3) # Default to 3
-
-    for i in range(0, len(detailed_recommendations), cols_per_row):
-        cols = st.columns(cols_per_row)
-        batch_recs = detailed_recommendations[i:i+cols_per_row]
-
-        for idx, rec in enumerate(batch_recs):
-            if idx < len(cols):
-                with cols[idx]:
-                    unique_key_part = rec.get('tmdb_id', f"rec_{i}_{idx}")
-                    with st.container(border=True, key=f"card_container_{unique_key_part}"):
-                        st.markdown(f"**{rec.get('title', 'Recommendation')}**") # More compact title
-
-                        poster_url = rec.get("poster_url")
-                        if poster_url and poster_url.startswith("http"):
-                            st.image(poster_url, use_container_width=True) # Scales with column
-                        else:
-                            st.caption(f"Poster for {rec.get('title', '')} (N/A)")
-
-                        if rec.get("explanation"):
-                            # Smaller text for explanation
-                            st.markdown(f"<small><i>CineBot says:</i> {rec.get('explanation')}</small>", unsafe_allow_html=True)
-                        else:
-                            st.caption("_CineBot is speechless!_")
-
-                        trailer_url = rec.get("trailer_url")
-                        if trailer_url and "youtube.com/watch?v=" in trailer_url:
-                             with st.expander("Trailer", expanded=False): # Shorter label
-                                st.video(trailer_url)
-                        elif trailer_url:
-                            st.markdown(f"<small>[🎬 Watch Trailer]({trailer_url})</small>", unsafe_allow_html=True) # Smaller link
-
-                        has_more_details = rec.get("tagline") or rec.get("overview")
-                        if has_more_details:
-                            with st.expander("Details", expanded=False): # Shorter label
-                                if rec.get("tagline"):
-                                    st.caption(f"Tagline: {rec.get('tagline')}") # Caption for less emphasis
-                                if rec.get("overview"):
-                                    st.caption(f"Overview: {rec.get('overview')}")
-                        # No explicit <br> to save vertical space
-
-# --- UI Elements ---
-st.sidebar.header("Display Options")
-st.session_state.cols_per_row_slider = st.sidebar.slider(
-    "Movies per row:",
-    min_value=1,
-    max_value=4,  # Max 4 cards per row seems reasonable for most screens
-    value=3,      # Default to 3
-    key="cols_slider"
-)
-with st.sidebar:
-  
-    st.image("./photos/logo2.png", width=350)
-  
-    st.markdown("##  Powered By: NEO4J")
-    
-    st.markdown("---")
-    st.markdown("""
-    <div style="margin-top: 0rem; font-size: 0.8rem; color: #888;">
-        <p>✍️ JANMAJAY KUMAR</p>
-        
-    </div>
-    """, unsafe_allow_html=True)
+    return detailed_recs
 
 
-tab1, tab2 = st.tabs([" Recommend by Text", "Recommend by Poster"]) # Shorter tab name
+def render_movie_card_html(rec, index):
+    """
+    Turn a recommendation dict into a movie card HTML snippet.
+    """
+    poster_url = rec.get("poster_url") or "https://via.placeholder.com/400x600.png?text=No+Poster"
+    title = html.escape(rec.get("title") or "Recommendation")
+    explanation = html.escape(rec.get("explanation") or "...")
+    tmdb_id = rec.get("tmdb_id")
+    trailer_url = rec.get("trailer_url")
 
-with tab1:
-    #st.header("Describe Your Desired Movie")
-    st.markdown("""
-    <div style="margin-bottom: 2rem;">
-        <h3>Find Movies by Description</h3>
-        <p style="color: #aaa;">Describe what you're looking for and let AI find matches</p>
-    </div>
-    """, unsafe_allow_html=True)
-    
-    text_query = st.text_area(
-        "E.g., 'A heartwarming animated film about friendship and adventure, perfect for families.'",
-        key="text_query_input_area",
-        placeholder="Discover movies using text descriptions or poster images!",
-        value=st.session_state.last_text_query,
-        height=80  # Reduced height
+    trailer_link = (
+        f'<a href="{trailer_url}" target="_blank" class="card-link">Trailer</a>'
+        if trailer_url
+        else ""
+    )
+    details_link = (
+        f'<a href="https://www.themoviedb.org/movie/{tmdb_id}" target="_blank" class="card-link">Details</a>'
+        if tmdb_id
+        else ""
     )
 
-    if st.button("Get Text-Based Recommendations", key="text_submit_btn", type="primary"):
-        if text_query:
-            st.session_state.last_text_query = text_query
-            st.session_state.text_recommendations_detailed = []
-            st.session_state.image_recommendations_detailed = []
-            with st.spinner("CineBot is thinking...  (Might take a moment)"):
-                try:
-                    llm_response_text, initial_retrieved_movies = recommend_by_text(
-                        text_query, top_k_retrieval=5, num_recommendations=st.session_state.cols_per_row_slider # Get N recs
-                    )
-                    parsed_llm_recs = parse_llm_recommendations(llm_response_text)
-                    detailed_recs = map_llm_recs_to_retrieved_details(parsed_llm_recs, initial_retrieved_movies)
-                    st.session_state.text_recommendations_detailed = detailed_recs
-                except Exception as e:
-                    logger.error(f"Error in text recommendation flow: {e}", exc_info=True)
-                    st.error("Oops! Something went wrong. CineBot is a bit confused.")
-        else:
-            st.warning("Please enter a description to get recommendations.")
+    # Non-movie / pure text card (e.g., Q&A answer)
+    if not tmdb_id and not trailer_url:
+        return f"""
+        <div class="movie-card text-only-card" style="animation-delay: {index * 100}ms;">
+            <div class="card-content">
+                <h4>{title}</h4>
+                <div class="card-explanation"><p>{explanation}</p></div>
+            </div>
+        </div>
+        """
 
-    if st.session_state.text_recommendations_detailed:
-        st.markdown("---")
-        st.subheader("CineBot's Picks For You (Text-Based):") 
-        display_recommendation_cards_v2(st.session_state.text_recommendations_detailed)
-    # Simplified retry: user can just click the button again if needed.
+    return f"""
+    <div class="movie-card" style="animation-delay: {index * 100}ms;">
+        <img src="{poster_url}" alt="Poster for {title}" class="poster-img">
+        <div class="card-content">
+            <h4>{title}</h4>
+            <div class="card-explanation"><p><i>CineBot says:</i> {explanation}</p></div>
+            <div class="card-actions">{trailer_link}{details_link}</div>
+        </div>
+    </div>
+    """
 
-with tab2:
-    st.header("Find Movies by Poster Likeness")
-    uploaded_image = st.file_uploader(
-        "Upload a movie poster image (JPG, PNG)",
-        type=["jpg", "jpeg", "png"],
-        key="image_uploader_widget"
-    )
 
-if uploaded_image is not None:
-    st.image(uploaded_image, caption=f"Your query poster: {uploaded_image.name}", width=100)
+# --- Routes ---
 
-    if st.button("Get Image-Based Recommendations", key="image_submit_btn", type="primary"):
-        st.session_state.last_image_filename = uploaded_image.name
-        st.session_state.text_recommendations_detailed = []
-        st.session_state.image_recommendations_detailed = []
+@app.route("/")
+def index():
+    # Start with a fresh session each time the page is loaded
+    session.clear()
+    return render_template("index.html")
 
-        with st.spinner("CineBot is analyzing the poster...  (Might take a moment)"):
-            try:
-                image_bytes = uploaded_image.getvalue()
 
-                # Validate if it's really a poster
+@app.route("/api/suggestion", methods=["GET"])
+def get_suggestion():
+    return jsonify({"suggestion": random.choice(SUGGESTION_PROMPTS)})
+
+
+@app.route("/api/feedback", methods=["POST"])
+def handle_feedback():
+    data = request.get_json()
+    logger.info(f"FEEDBACK RECEIVED: {data}")
+    return jsonify({"status": "success"})
+
+
+@app.route("/api/chat", methods=["POST"])
+def handle_chat():
+    """
+    Unified chat endpoint:
+    - Handles text queries (prompt box)
+    - Handles poster uploads (image search)
+    - Maintains a trimmed chat history in server-side session
+    """
+    try:
+        MAX_TURNS = 6  # how many last messages to keep in server-side history
+
+        # Check if request is JSON or form data
+        if request.is_json:
+            # Handle JSON requests from frontend
+            data = request.get_json()
+            user_query = data.get("message") or data.get("query")
+            image_bytes = None
             
-                if not is_valid_movie_poster(image_bytes):
-                    st.warning("This doesn't look like a valid movie poster. Please upload a poster-style image.")
-                    st.stop()  # Exit early if not valid
+            # Get chat history from JSON and clean it
+            raw_history = data.get("chat_history", [])
+            chat_history = []
+            for msg in raw_history:
+                # Only keep role and content, strip out context/movies
+                clean_msg = {
+                    "role": msg.get("role", "user"),
+                    "content": msg.get("content", "")
+                }
+                chat_history.append(clean_msg)
+        else:
+            # Handle form data (for poster uploads)
+            # Prefer client-sent history (if you store it in JS), otherwise use session
+            history_json = request.form.get("chat_history")
+            if history_json:
+                try:
+                    chat_history = json.loads(history_json)
+                except json.JSONDecodeError:
+                    chat_history = []
+            else:
+                chat_history = session.get("chat_history", [])
 
-                # Proceed with embedding and RAG logic
-                llm_response_text, initial_retrieved_movies = recommend_by_poster_image(
-                    image_bytes, top_k_retrieval=5, num_recommendations=st.session_state.cols_per_row_slider
-                )
-                parsed_llm_recs = parse_llm_recommendations(llm_response_text)
-                detailed_recs = map_llm_recs_to_retrieved_details(parsed_llm_recs, initial_retrieved_movies)
-                st.session_state.image_recommendations_detailed = detailed_recs
+            # Extract incoming data
+            user_query = request.form.get("query")
+            image_file = request.files.get("poster")
+            image_bytes = image_file.read() if image_file else None
 
-            except Exception as e:
-                logger.error(f"Error in image recommendation flow: {e}", exc_info=True)
-                st.error("Oops! Something went wrong. CineBot needs its glasses.")
+        # Basic validation: require either text or image
+        if user_query:
+            chat_history.append({"role": "user", "content": user_query})
+        elif image_bytes:
+            chat_history.append({"role": "user", "content": "(Uploaded a poster)"})
+        else:
+            logger.error("No query or image provided in request")
+            return jsonify({"error": "No query or image provided."}), 400
 
-    if st.session_state.image_recommendations_detailed:
-        st.markdown("---")
-        st.subheader("CineBot's Picks For You (Image-Based):") 
-        display_recommendation_cards_v2(st.session_state.image_recommendations_detailed)
+        logger.info(f"Processing query: {user_query[:50] if user_query else 'poster upload'}")
+        
+        # Core RAG processing
+        bot_response_text, context_movies = process_query(
+            user_query=user_query,
+            image_bytes=image_bytes,
+            chat_history=chat_history,
+        )
+        
+        # Ensure we have a valid response
+        if not bot_response_text:
+            bot_response_text = "I'm having trouble processing your request. Please try rephrasing."
+            logger.warning("process_query returned None for bot_response_text")
+        
+        if context_movies is None:
+            context_movies = []
 
-# --- Footer ---
-st.markdown("---") 
-st.markdown("<p style='text-align: center; font-size: small;'>Powered by Neo4j | OpenAI | CLIP | Streamlit</p>", unsafe_allow_html=True)
+        # Add assistant message with full context (for the in-memory history / client)
+        bot_message = {
+            "role": "assistant",
+            "content": bot_response_text,
+            "context": context_movies,  # this can be heavy, so we won't store it in session
+        }
+        chat_history.append(bot_message)
 
-logger.info("Streamlit app initialized/reloaded with compact layout.")
+        # --- Trim and store history in server-side session (with context for last message) ---
+        session_history = []
+        for i, msg in enumerate(chat_history[-MAX_TURNS:]):
+            stored_msg = {
+                "role": msg.get("role"),
+                "content": (msg.get("content") or "")[:500],
+            }
+            # Store full context only for the last assistant message (for follow-ups)
+            if msg.get("role") == "assistant" and i == len(chat_history[-MAX_TURNS:]) - 1:
+                stored_msg["context"] = msg.get("context", [])
+            session_history.append(stored_msg)
+
+        session["chat_history"] = session_history
+        # -----------------------------------------------------------------------
+
+        # Logging (optional, for debugging)
+        print("🧠 chat_history (trimmed) stored in session:")
+        for msg in session_history:
+            print(f"{msg['role']}: {msg['content'][:60]}")
+
+        # Build movie cards for UI
+        parsed_recs = parse_llm_recommendations(bot_response_text)
+        detailed_recs = map_llm_recs_to_retrieved_details(parsed_recs, context_movies)
+        html_cards = "".join(
+            [render_movie_card_html(rec, i) for i, rec in enumerate(detailed_recs)]
+        )
+
+        return jsonify(
+            {
+                "response": bot_response_text,  # Match frontend expectation
+                "llm_response_text": bot_response_text,
+                "html_cards": html_cards,
+                "movies": context_movies,  # Match frontend expectation
+                "context_movies": context_movies,
+            }
+        )
+
+    except Exception as e:
+        logger.error(f"Error in chat API: {e}", exc_info=True)
+        import traceback
+        error_details = traceback.format_exc()
+        print(f"\n[ERROR] CHAT API ERROR:\n{error_details}\n")
+        return jsonify({
+            "error": f"An internal error occurred: {str(e)}",
+            "details": error_details if app.debug else None
+        }), 500
+
+
+if __name__ == "__main__":
+    # For local debugging only; in production you use gunicorn
+    app.run(debug=True, host='0.0.0.0', port=8000)
+

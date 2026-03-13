@@ -45,9 +45,9 @@ if __name__ == "__main__":
 
     if movie_id:
         details = get_movie_details(movie_id)
-        print(f"\n🎬 Title: {details.get('title')}")
-        print(f"🗓️ Release Date: {details.get('release_date')}")
+        print(f"\nMovie: Title: {details.get('title')}")
+        print(f"Release: Release Date: {details.get('release_date')}")
         print(f"🧾 Tagline: {details.get('tagline')}")
         print(f"📖 Overview: {details.get('overview')}")
         print(f"🎭 Genres: {[genre['name'] for genre in details.get('genres', [])]}")
-        print(f"🖼️ Poster URL: https://image.tmdb.org/t/p/w500{details.get('poster_path')}")
+        print(f"Poster: Poster URL: https://image.tmdb.org/t/p/w500{details.get('poster_path')}")
