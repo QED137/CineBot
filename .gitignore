@@ -187,3 +187,5 @@ git_cleanup.sh
 # Notebooks
 .ipynb_checkpoints/
 *.ipynb
+
+frontend/.vite/
