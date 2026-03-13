@@ -1,146 +1,156 @@
-# Graph-Powered Retrieval-Augmented Generation (RAG) for Smarter Recommendations
+# CineBot
 
-Description: This project demonstrates the integration of Retrieval-Augmented Generation (RAG) with 
-graph databases (Neo4j) and Large Language Models (LLMs) to create an intelligent and scalable recommendation
-system. By leveraging the structured nature of graph databases and the dynamic
-capabilities of LLMs, the system delivers contextually relevant and accurate recommendations for movies.
+CineBot is a graph-powered movie recommendation and discovery application built with FastAPI, React, Neo4j, and OpenAI. It supports conversational movie search, poster-based discovery, and curated film reading content from major movie blogs.
+
 <p align="center">
-  <img src="./photos/newmediacinebot.png" width="600" alt="CineBot Screenshot">
+   <img src="./photos/newmediacinebot.png" width="720" alt="CineBot Screenshot">
 </p>
 
-# Key Features 
-  * Graph Database Integration: Utilizes Neo4j to structure and query complex data relationships efficiently.
-  * Retrieval-Augmented Generation: Combines external data retrieval with generative AI to reduce hallucinations and improve response accuracy.
-  * Movie Recommendations: Provides movie recommendations and contextual answers based on user queries.
-  * Embeddings and Similarity: Leverages semantic embeddings to find similar movies dynamically.
-  * Interactive Interface: A user-friendly Streamlit-based web application for an engaging user experience.
+## What this project does
 
-# Technology Stack:
-  * Neo4j: Graph database for storing and querying movie data.
-  * Streamlit: Interactive UI framework for seamless user interaction.
-  * LangChain: Framework for LLM-powered chain integrations.
-  * SentenceTransformers: For generating semantic embeddings.
-  * Fuzzy Matching: Enhances query accuracy for movie recommendations.
-  * TMDb API: Fetches movie posters and metadata.
+- Conversational movie recommendations with context-aware responses
+- Graph-based retrieval from Neo4j to improve recommendation relevance
+- Poster image query support for visual movie discovery
+- Curated film reading tabs:
+   - Articles from multiple sources
+   - 10 Best Lists from Taste of Cinema
+- Live keyword search against Taste of Cinema in the 10 Best Lists tab
+- Mobile-optimized interface with compact header, touch-friendly controls, and back-to-top buttons
 
-# How It Works:
-  * Data Storage: Movies and relationships are stored in Neo4j as nodes and edges.
-  * Semantic Search: Queries are processed using semantic embeddings to retrieve contextually similar movies.
-  * RAG Workflow: LLMs augment responses by retrieving relevant data from Neo4j.
-  * Dynamic Recommendations: Personalized recommendations and answers are generated based on user input.
+## Architecture
 
+- Backend: FastAPI API server (`app_fastapi.py`)
+- Frontend: React + Vite (`frontend/`)
+- Graph database: Neo4j (local Docker or Aura)
+- Caching: Redis (optional; in-memory fallback if unavailable)
+- Content feeds: RSS ingestion with source-aware search (`external_apis/rss_feed_client.py`)
 
+## Repository structure
 
+- `app_fastapi.py`: Main FastAPI app and API routes
+- `core/`: Retrieval, ranking, Cypher generation, caching, recommendation services
+- `external_apis/`: TMDB client and RSS feed aggregation/search
+- `frontend/`: React UI (chat, articles, 10 best lists, mobile layout)
+- `config/`: Environment and runtime settings
+- `docker-compose*.yml`: Local/dev/production compose definitions
 
-# Setup Instructions:
-  1. Clone the repository:
+## Prerequisites
 
-     ```
-        git clone https://github.com/QED137/CineBot.git
-        cd cineBoat
- 2. Install Dependencies
+- Python 3.10+
+- Node.js 18+
+- Neo4j (local Docker or Aura)
+- Redis (optional)
+- OpenAI API key
 
-    ```
-     pip install -r requirements.txt
-3. Set up your Neo4j database and .env file with credentials:
-   ```bash
-   cp .env.example .env
-   # Edit .env with your API keys
-   ```
+## Environment configuration
 
-   **Option A: Use Local Neo4j (Recommended for Development)**
-   ```bash
-   # Start local Neo4j + Redis with Docker
-   ./start-local-dev.sh
-   
-   # Use local config
-   cp .env.local .env
-   
-   # Access Neo4j Browser: http://localhost:7474
-   # Login: neo4j / cinebot123
-   ```
-   
-   **Option B: Use Neo4j Aura (Cloud)**
-   - Sign up at https://neo4j.com/cloud/aura/
-   - Add connection details to `.env`
+Create an `.env` file in the project root and configure required values.
 
-4. Start Redis (if not using Docker):
-   ```bash
-   sudo service redis-server start
-   ```
+Typical required variables include:
 
-5. Run the FastAPI backend:
-   ```bash
-   uvicorn app_fastapi:app --reload
-   ```
+- `OPENAI_API_KEY`
+- `NEO4J_URI`
+- `NEO4J_USERNAME`
+- `NEO4J_PASSWORD`
 
-6. Run the React frontend (in a new terminal):
-   ```bash
-   cd frontend
-   npm install
-   npm run dev
-   ```
+Optional values (if used in your setup):
 
-7. Access the app at http://localhost:3000
+- `REDIS_HOST`
+- `REDIS_PORT`
+- `TMDB_API_KEY`
 
----
+See the deployment and setup guides in this repository for environment details by platform.
 
-## [HOME] **Local Development (No Cloud Needed!)**
+## Local development
 
-Run everything locally with Docker - **no more daily Neo4j Aura restarts!**
+### 1) Clone and install backend dependencies
 
 ```bash
-# One command to start Neo4j + Redis
+git clone https://github.com/QED137/CineBot.git
+cd CineBot
+python3 -m venv .venv
+source .venv/bin/activate
+pip install -r requirements.txt
+```
+
+### 2) Start data services
+
+Option A: Local Docker services
+
+```bash
 ./start-local-dev.sh
-
-# See full guide
-cat LOCAL_NEO4J_SETUP.md
 ```
 
-**Benefits:**
-- [OK] No daily manual restarts (Aura free tier limitation)
-- [OK] Better performance on your hardware (6 CPU, 12GB RAM)
-- [OK] Always available, no internet required
-- [OK] Full control over database configuration
+Option B: External services
 
----
+- Use Neo4j Aura or your own Neo4j instance
+- Start Redis if you want Redis caching enabled
 
-## [DEPLOY] **Cloud Deployment**
+### 3) Start backend
 
-Deploy CineBot to the cloud in minutes! See our deployment guides:
-
-- **[Strato Server Guide](DEPLOY_STRATO.md)** - Deploy to your Strato VPS (if you have SSH access) - **FREE!**
-- **[Quick Start Guide](DEPLOY_QUICK_START.md)** - Deploy in 5 minutes with Railway
-- **[Full Deployment Guide](DEPLOYMENT.md)** - All cloud platforms (AWS, Azure, GCP, Railway, Render, Vercel)
-
-### Deploy with Docker:
 ```bash
-./deploy.sh
+./start_fastapi.sh
 ```
 
-### Deploy to Strato (if you have VPS):
-1. SSH to your server
-2. Install Docker
-3. Clone repo and run: `docker-compose up -d --build`
-4. See [DEPLOY_STRATO.md](DEPLOY_STRATO.md) for full guide
+or
 
-### One-Click Deploy to Railway:
-1. Push to GitHub
-2. Import to [Railway.app](https://railway.app)
-3. Add environment variables
-4. Done! [DONE]
+```bash
+uvicorn app_fastapi:app --host 0.0.0.0 --port 8000 --reload
+```
 
----
+### 4) Start frontend
 
-## [DOCS] Documentation
+```bash
+cd frontend
+npm install
+npm run dev
+```
 
-- [Architecture Overview](ARCHITECTURE.md)
-- [FastAPI Migration](FASTAPI_MIGRATION.md)
-- [Redis Setup](REDIS_SETUP.md)
-- [Production Optimization](PRODUCTION_OPTIMIZATION.md)
-# Use cases :
- * Personalized Movie Recommendations: Find movies similar to your favorites.
- * Knowledge Retrieval: Ask movie-related questions like "Who directed Inception?" or "What movies came out after 2010?"
- * Interactive Learning: Understand the power of combining RAG with graph-based systems.
+### 5) Open the app
+
+- Frontend: `http://localhost:3001` (or the port shown by Vite)
+- Backend health check: `http://localhost:8000/api/health`
+
+## Key API endpoints
+
+- `POST /api/chat`: Text or poster-based movie query
+- `GET /api/suggestion`: Random query suggestion
+- `GET /api/health`: Service health
+- `GET /api/articles`: Aggregated articles
+   - Params: `limit`, `source`, `search`
+- `GET /api/articles/featured`: Featured industry articles
+- `GET /api/articles/sources`: Available RSS sources
+
+## Deployment
+
+For detailed deployment instructions, use the existing guides:
+
+- [DEPLOY_STRATO.md](DEPLOY_STRATO.md)
+- [DEPLOY_4GB_STRATO.md](DEPLOY_4GB_STRATO.md)
+- [DEPLOY_QUICK_START.md](DEPLOY_QUICK_START.md)
+- [DEPLOYMENT.md](DEPLOYMENT.md)
+- [DEPLOY_UPDATE.md](DEPLOY_UPDATE.md)
+
+If you use the update script added in this branch:
+
+```bash
+./update-strato.sh
+```
+
+## Troubleshooting
+
+- If backend starts but Redis is unavailable, the app can continue with in-memory caching.
+- If article search results seem limited, verify backend is restarted after RSS search changes.
+- If Docker containers conflict during deploy, run the update script or clean old containers before restart.
+
+## Additional documentation
+
+- [ARCHITECTURE.md](ARCHITECTURE.md)
+- [FASTAPI_MIGRATION.md](FASTAPI_MIGRATION.md)
+- [REDIS_SETUP.md](REDIS_SETUP.md)
+- [PRODUCTION_OPTIMIZATION.md](PRODUCTION_OPTIMIZATION.md)
+- [LOCAL_NEO4J_SETUP.md](LOCAL_NEO4J_SETUP.md)
+
 ## License
-  MIT
+
+MIT
