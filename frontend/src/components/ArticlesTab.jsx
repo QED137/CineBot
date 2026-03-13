@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { Newspaper, Search, RefreshCw, Filter, AlertCircle } from 'lucide-react';
+import React, { useState, useEffect, useRef } from 'react';
+import { Newspaper, Search, RefreshCw, Filter, AlertCircle, ChevronUp } from 'lucide-react';
 import ArticleCard from './ArticleCard';
 import SkeletonLoader from './SkeletonLoader';
 
@@ -19,6 +19,8 @@ const ArticlesTab = () => {
   const [selectedSource, setSelectedSource] = useState(null);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [recommendedMovies, setRecommendedMovies] = useState([]);
+  const [showBackToTop, setShowBackToTop] = useState(false);
+  const scrollContainerRef = useRef(null);
 
   // Get recommended movies from localStorage
   const getRecommendedMovies = () => {
@@ -216,8 +218,23 @@ const ArticlesTab = () => {
     fetchArticles();
   };
 
+  const handleScroll = () => {
+    if (!scrollContainerRef.current) return;
+    setShowBackToTop(scrollContainerRef.current.scrollTop > 500);
+  };
+
+  const scrollToTop = () => {
+    if (!scrollContainerRef.current) return;
+    scrollContainerRef.current.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
   return (
-    <div className="h-full overflow-y-auto bg-gradient-to-b from-slate-900 to-slate-950">
+    <div className="relative h-full">
+      <div
+        ref={scrollContainerRef}
+        onScroll={handleScroll}
+        className="h-full overflow-y-auto bg-gradient-to-b from-slate-900 to-slate-950"
+      >
       <div className="max-w-7xl mx-auto px-4 py-8">
         {/* Header */}
         <div className="flex items-center justify-between mb-8">
@@ -388,6 +405,18 @@ const ArticlesTab = () => {
         </div>
       )}
       </div>
+      </div>
+
+      {showBackToTop && (
+        <button
+          type="button"
+          onClick={scrollToTop}
+          className="sm:hidden fixed bottom-24 right-4 z-30 rounded-full bg-purple-600 text-white p-3 shadow-lg border border-purple-400/30 hover:bg-purple-500 transition-colors"
+          aria-label="Back to top"
+        >
+          <ChevronUp size={20} />
+        </button>
+      )}
     </div>
   );
 };

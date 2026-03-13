@@ -1,29 +1,49 @@
 import { motion } from 'framer-motion';
-import { ListOrdered, TrendingUp, Clock, ExternalLink, Search, Sparkles } from 'lucide-react';
-import { useState, useEffect } from 'react';
+import { ListOrdered, TrendingUp, Clock, ExternalLink, Search, Sparkles, ChevronUp } from 'lucide-react';
+import { useState, useEffect, useRef } from 'react';
 import { articlesAPI } from '../services/api';
 import SkeletonLoader from './SkeletonLoader';
 
 export default function TopTenListsTab() {
   const [articles, setArticles] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [searchLoading, setSearchLoading] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [filteredArticles, setFilteredArticles] = useState([]);
+  const [showBackToTop, setShowBackToTop] = useState(false);
+  const scrollContainerRef = useRef(null);
 
   useEffect(() => {
     fetchTasteOfCinemaArticles();
   }, []);
 
   useEffect(() => {
-    if (searchQuery.trim()) {
-      const filtered = articles.filter(article =>
-        article.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        (article.summary && article.summary.toLowerCase().includes(searchQuery.toLowerCase()))
-      );
-      setFilteredArticles(filtered);
-    } else {
+    const query = searchQuery.trim();
+
+    if (!query) {
       setFilteredArticles(articles);
+      setSearchLoading(false);
+      return;
     }
+
+    const timer = setTimeout(async () => {
+      try {
+        setSearchLoading(true);
+        const data = await articlesAPI.getArticles(30, 'tasteofcinema', query);
+        setFilteredArticles(data.articles || []);
+      } catch (error) {
+        console.error('Live search failed, using local fallback:', error);
+        const fallback = articles.filter(article =>
+          article.title.toLowerCase().includes(query.toLowerCase()) ||
+          (article.summary && article.summary.toLowerCase().includes(query.toLowerCase()))
+        );
+        setFilteredArticles(fallback);
+      } finally {
+        setSearchLoading(false);
+      }
+    }, 350);
+
+    return () => clearTimeout(timer);
   }, [searchQuery, articles]);
 
   const fetchTasteOfCinemaArticles = async () => {
@@ -49,6 +69,16 @@ export default function TopTenListsTab() {
     return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
   };
 
+  const handleScroll = () => {
+    if (!scrollContainerRef.current) return;
+    setShowBackToTop(scrollContainerRef.current.scrollTop > 500);
+  };
+
+  const scrollToTop = () => {
+    if (!scrollContainerRef.current) return;
+    scrollContainerRef.current.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
   if (loading) {
     return (
       <div className="h-full p-6">
@@ -66,7 +96,11 @@ export default function TopTenListsTab() {
   }
 
   return (
-    <div className="h-full flex flex-col p-6 overflow-y-auto">
+    <div
+      ref={scrollContainerRef}
+      onScroll={handleScroll}
+      className="relative h-full flex flex-col p-6 overflow-y-auto"
+    >
       {/* Header */}
       <div className="mb-8">
         <div className="flex items-center gap-3 mb-3">
@@ -105,7 +139,13 @@ export default function TopTenListsTab() {
       </div>
 
       {/* Articles Grid */}
-      {filteredArticles.length === 0 ? (
+      {searchLoading ? (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 pb-6">
+          {[...Array(3)].map((_, i) => (
+            <SkeletonLoader key={i} height="h-80" />
+          ))}
+        </div>
+      ) : filteredArticles.length === 0 ? (
         <div className="flex-1 flex items-center justify-center">
           <div className="text-center">
             <ListOrdered className="w-16 h-16 text-slate-600 mx-auto mb-4" />
@@ -123,6 +163,17 @@ export default function TopTenListsTab() {
             <ArticleListCard key={article.id || index} article={article} index={index} />
           ))}
         </div>
+      )}
+
+      {showBackToTop && (
+        <button
+          type="button"
+          onClick={scrollToTop}
+          className="sm:hidden fixed bottom-24 right-4 z-30 rounded-full bg-purple-600 text-white p-3 shadow-lg border border-purple-400/30 hover:bg-purple-500 transition-colors"
+          aria-label="Back to top"
+        >
+          <ChevronUp size={20} />
+        </button>
       )}
     </div>
   );

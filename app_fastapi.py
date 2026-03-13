@@ -309,7 +309,7 @@ async def get_articles(
         rss_client = get_rss_client()
         
         if search:
-            articles = rss_client.search_articles(query=search, limit=limit)
+            articles = rss_client.search_articles(query=search, limit=limit, source=source)
         else:
             articles = rss_client.get_articles(limit=limit, source=source)
         

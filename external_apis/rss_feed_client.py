@@ -8,6 +8,9 @@ import logging
 from datetime import datetime
 from typing import List, Dict, Any, Optional
 import re
+import html
+from urllib.request import urlopen, Request
+from urllib.parse import quote_plus
 from urllib.parse import urlparse
 
 logger = logging.getLogger(__name__)
@@ -255,18 +258,74 @@ class RSSFeedClient:
         articles.sort(key=lambda x: x.get('publishDate', ''), reverse=True)
         return articles[:count]
     
-    def search_articles(self, query: str, limit: int = 10) -> List[Dict[str, Any]]:
+    def search_articles(
+        self,
+        query: str,
+        limit: int = 10,
+        source: Optional[str] = None
+    ) -> List[Dict[str, Any]]:
         """
         Search articles by keyword in title or summary
         
         Args:
             query: Search query
             limit: Maximum results
+            source: Optional source filter (feed key)
             
         Returns:
             Matching articles
         """
-        all_articles = self.get_articles(limit=100)  # Search in recent 100
+        if source == "tasteofcinema":
+            html_results = self._search_tasteofcinema_html(query=query, limit=limit)
+            if len(html_results) >= limit:
+                return html_results[:limit]
+
+            source_feed = self.fetch_feed(source)
+            all_articles = []
+
+            if source_feed:
+                source_info = self.feeds[source]
+                for entry in source_feed.entries[:50]:
+                    try:
+                        all_articles.append(self.parse_article(entry, source_info))
+                    except Exception as e:
+                        logger.error(f"Error parsing article during search: {e}")
+                        continue
+
+            query_lower = query.lower()
+            feed_matches = []
+            for article in all_articles:
+                title = article.get('title', '').lower()
+                summary = article.get('summary', '').lower()
+
+                if query_lower in title or query_lower in summary:
+                    feed_matches.append(article)
+
+            seen_urls = {a.get("url") for a in html_results if a.get("url")}
+            merged = list(html_results)
+            for article in feed_matches:
+                article_url = article.get("url")
+                if article_url and article_url not in seen_urls:
+                    merged.append(article)
+                    seen_urls.add(article_url)
+
+            return merged[:limit]
+
+        if source and source in self.feeds:
+            source_feed = self.fetch_feed(source)
+            all_articles = []
+
+            if source_feed:
+                source_info = self.feeds[source]
+                for entry in source_feed.entries[:50]:
+                    try:
+                        all_articles.append(self.parse_article(entry, source_info))
+                    except Exception as e:
+                        logger.error(f"Error parsing article during search: {e}")
+                        continue
+        else:
+            all_articles = self.get_articles(limit=100)  # Search in recent 100
+
         query_lower = query.lower()
         
         matches = []
@@ -278,6 +337,49 @@ class RSSFeedClient:
                 matches.append(article)
         
         return matches[:limit]
+
+    def _search_tasteofcinema_html(self, query: str, limit: int = 10) -> List[Dict[str, Any]]:
+        """Search Taste of Cinema via HTML search page and parse result links."""
+        try:
+            search_url = f"https://www.tasteofcinema.com/?s={quote_plus(query)}"
+            request = Request(search_url, headers={"User-Agent": "Mozilla/5.0 CineBot/1.0"})
+
+            with urlopen(request, timeout=15) as response:
+                html_text = response.read().decode("utf-8", errors="ignore")
+
+            matches = re.findall(
+                r'<h2[^>]*class="[^"]*entry-title[^"]*"[^>]*>\s*<a[^>]*href="([^"]+)"[^>]*>(.*?)</a>',
+                html_text,
+                re.IGNORECASE | re.DOTALL
+            )
+
+            results = []
+            for url, raw_title in matches[:limit]:
+                clean_title = re.sub(r'<[^>]+>', '', raw_title)
+                clean_title = html.unescape(clean_title).strip()
+
+                if not clean_title or not url.startswith("http"):
+                    continue
+
+                results.append({
+                    "id": url,
+                    "title": clean_title,
+                    "summary": "",
+                    "content": "",
+                    "url": url,
+                    "author": "Taste of Cinema",
+                    "publishDate": None,
+                    "source": "Taste of Cinema",
+                    "category": "Film Lists & Essays",
+                    "imageUrl": None,
+                    "tags": [],
+                    "readTime": 1
+                })
+
+            return results
+        except Exception as e:
+            logger.error(f"Taste of Cinema HTML search failed: {e}")
+            return []
     
     def get_sources(self) -> List[Dict[str, str]]:
         """

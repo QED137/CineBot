@@ -537,7 +537,7 @@ export default function ChatTab() {
       )}
 
       {/* Unified Composer */}
-      <div className="relative border-t border-slate-700/50 bg-gradient-to-b from-slate-800/30 via-slate-800/50 to-slate-900/70 backdrop-blur-2xl">
+      <div className="relative border-t border-slate-700/50 bg-gradient-to-b from-slate-800/30 via-slate-800/50 to-slate-900/70 backdrop-blur-2xl pb-[env(safe-area-inset-bottom)]">
         {/* Ambient Glow */}
         <div className="absolute inset-0 bg-gradient-to-t from-primary/5 via-transparent to-transparent pointer-events-none" />
         
@@ -591,7 +591,7 @@ export default function ChatTab() {
                 />
                 <label
                   htmlFor="image-upload"
-                  className="flex-shrink-0 bg-slate-700/50 hover:bg-slate-600/50 text-slate-300 hover:text-white rounded-xl p-3 transition-all hover:scale-105 cursor-pointer border border-slate-600/30 hover:border-primary/30 group/upload"
+                  className="flex-shrink-0 min-h-11 min-w-11 bg-slate-700/50 hover:bg-slate-600/50 text-slate-300 hover:text-white rounded-xl p-3 transition-all hover:scale-105 cursor-pointer border border-slate-600/30 hover:border-primary/30 group/upload"
                   title="Upload poster image"
                   tabIndex={0}
                 >
@@ -617,7 +617,7 @@ export default function ChatTab() {
                   <button
                     type="button"
                     onClick={fetchSuggestion}
-                    className="absolute right-2 top-1/2 -translate-y-1/2 p-2 text-slate-400 hover:text-primary transition-all hover:scale-110 hover:rotate-12 rounded-lg"
+                    className="absolute right-2 top-1/2 -translate-y-1/2 min-h-10 min-w-10 p-2 text-slate-400 hover:text-primary transition-all hover:scale-110 hover:rotate-12 rounded-lg"
                     title="Get inspiration"
                     aria-label="Get query suggestion"
                     disabled={isLoading}
@@ -633,7 +633,7 @@ export default function ChatTab() {
                   <button
                     type="button"
                     onClick={stopQuery}
-                    className="flex-shrink-0 bg-gradient-to-br from-red-600 to-red-700 hover:from-red-500 hover:to-red-600 text-white rounded-xl px-5 py-3 transition-all hover:scale-105 active:scale-95 flex items-center gap-2 shadow-lg shadow-red-600/30 font-medium border border-red-500/30"
+                    className="flex-shrink-0 min-h-11 bg-gradient-to-br from-red-600 to-red-700 hover:from-red-500 hover:to-red-600 text-white rounded-xl px-5 py-3 transition-all hover:scale-105 active:scale-95 flex items-center gap-2 shadow-lg shadow-red-600/30 font-medium border border-red-500/30"
                     aria-label="Stop query"
                   >
                     <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -646,7 +646,7 @@ export default function ChatTab() {
                   <button
                     type="submit"
                     disabled={!inputValue.trim() && !selectedImage}
-                    className="flex-shrink-0 bg-gradient-to-br from-primary via-purple-600 to-purple-700 hover:from-primary/90 hover:via-purple-600/90 hover:to-purple-700/90 disabled:from-slate-700 disabled:via-slate-750 disabled:to-slate-800 disabled:opacity-50 disabled:cursor-not-allowed text-white rounded-xl px-5 py-3 transition-all hover:scale-105 active:scale-95 flex items-center gap-2 shadow-lg shadow-primary/30 hover:shadow-primary/40 font-medium border border-primary/20"
+                    className="flex-shrink-0 min-h-11 bg-gradient-to-br from-primary via-purple-600 to-purple-700 hover:from-primary/90 hover:via-purple-600/90 hover:to-purple-700/90 disabled:from-slate-700 disabled:via-slate-750 disabled:to-slate-800 disabled:opacity-50 disabled:cursor-not-allowed text-white rounded-xl px-5 py-3 transition-all hover:scale-105 active:scale-95 flex items-center gap-2 shadow-lg shadow-primary/30 hover:shadow-primary/40 font-medium border border-primary/20"
                     aria-label="Send message"
                   >
                     <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -664,7 +664,7 @@ export default function ChatTab() {
           </form>
           
           {/* Keyboard Shortcuts */}
-          <div className="flex items-center justify-center gap-4 mt-4 text-xs text-slate-500">
+          <div className="hidden sm:flex items-center justify-center gap-4 mt-4 text-xs text-slate-500">
             <div className="flex items-center gap-1.5">
               <kbd className="px-2 py-1 bg-slate-800/50 rounded-md border border-slate-700/50 font-mono text-slate-400">Enter</kbd>
               <span>Send</span>

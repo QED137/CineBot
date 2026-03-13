@@ -19,17 +19,17 @@ echo ""
 
 # Check if containers already exist
 if docker ps -a --format '{{.Names}}' | grep -q "cinebot-neo4j"; then
-    echo "📦 Existing containers found"
+    echo " Existing containers found"
     read -p "Do you want to restart them? (y/n): " restart
     if [[ $restart == "y" || $restart == "Y" ]]; then
-        echo "🔄 Restarting containers..."
+        echo " Restarting containers..."
         docker-compose -f docker-compose.dev.yml restart
     else
         echo "[INFO] Starting containers..."
         docker-compose -f docker-compose.dev.yml start
     fi
 else
-    echo "📦 Creating new containers..."
+    echo " Creating new containers..."
     docker-compose -f docker-compose.dev.yml up -d
 fi
 
@@ -73,16 +73,16 @@ echo "==================================================="
 echo "=== Local Development Environment is Ready! ==="
 echo "==================================================="
 echo ""
-echo "📊 Neo4j Browser:"
+echo " Neo4j Browser:"
 echo "   URL: http://localhost:7474"
 echo "   Username: neo4j"
 echo "   Password: cinebot123"
 echo ""
-echo "📦 Redis:"
+echo " Redis:"
 echo "   Host: localhost"
 echo "   Port: 6379"
 echo ""
-echo "🔧 Update your .env file:"
+echo " Update your .env file:"
 echo "   NEO4J_URI=bolt://localhost:7687"
 echo "   NEO4J_USERNAME=neo4j"
 echo "   NEO4J_PASSWORD=cinebot123"

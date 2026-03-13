@@ -1,5 +1,5 @@
 import { motion } from 'framer-motion';
-import { Sparkles, Database, Brain, Zap } from 'lucide-react';
+import { Sparkles, Database, Brain, Zap, Film } from 'lucide-react';
 
 export default function Header() {
   const techStack = [
@@ -10,12 +10,12 @@ export default function Header() {
   ];
 
   return (
-    <header className="bg-gradient-to-r from-slate-800/50 via-slate-800/30 to-slate-800/50 backdrop-blur-xl border-b border-slate-700/50 px-6 py-5 shadow-lg">
+    <header className="bg-gradient-to-r from-slate-800/50 via-slate-800/30 to-slate-800/50 backdrop-blur-xl border-b border-slate-700/50 px-3 sm:px-6 py-2 sm:py-5 shadow-lg">
       {/* Warning Banner */}
       <motion.div
         initial={{ opacity: 0, y: -10 }}
         animate={{ opacity: 1, y: 0 }}
-        className="overflow-hidden mb-4"
+        className="hidden sm:block overflow-hidden mb-4"
       >
         <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-yellow-500/10 border border-yellow-500/20">
           <Sparkles className="w-4 h-4 text-yellow-400 animate-pulse" />
@@ -26,18 +26,28 @@ export default function Header() {
       </motion.div>
       
       {/* Main Title */}
-      <div className="flex items-center justify-between flex-wrap gap-4">
+      <div className="sm:hidden flex items-center gap-2 min-h-10">
+        <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center">
+          <Film className="w-4 h-4 text-white" />
+        </div>
+        <div className="min-w-0">
+          <h1 className="text-base font-semibold text-white leading-tight">CineBot</h1>
+          <p className="text-[11px] text-slate-400 leading-tight">AI Movie Recommender</p>
+        </div>
+      </div>
+
+      <div className="hidden sm:flex items-center justify-between flex-wrap gap-3 sm:gap-4">
         <div>
           <motion.h1
             initial={{ opacity: 0, x: -20 }}
             animate={{ opacity: 1, x: 0 }}
             transition={{ delay: 0.1 }}
-            className="text-3xl md:text-4xl font-bold tracking-tight mb-2"
+            className="text-2xl sm:text-3xl md:text-4xl font-bold tracking-tight mb-2"
           >
             <span className="bg-gradient-to-r from-indigo-400 via-purple-400 to-pink-400 bg-clip-text text-transparent">
               CineBot
             </span>
-            <span className="text-slate-200 ml-3 text-2xl md:text-3xl font-medium">
+            <span className="text-slate-200 ml-2 sm:ml-3 text-lg sm:text-2xl md:text-3xl font-medium">
               AI Movie Recommender
             </span>
           </motion.h1>
