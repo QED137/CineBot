@@ -59,7 +59,7 @@ Optional values (if used in your setup):
 - `REDIS_PORT`
 - `TMDB_API_KEY`
 
-See the deployment and setup guides in this repository for environment details by platform.
+This repository is documented for local development and demonstration.
 
 ## Local development
 
@@ -121,27 +121,11 @@ npm run dev
 - `GET /api/articles/featured`: Featured industry articles
 - `GET /api/articles/sources`: Available RSS sources
 
-## Deployment
-
-For detailed deployment instructions, use the existing guides:
-
-- [DEPLOY_STRATO.md](DEPLOY_STRATO.md)
-- [DEPLOY_4GB_STRATO.md](DEPLOY_4GB_STRATO.md)
-- [DEPLOY_QUICK_START.md](DEPLOY_QUICK_START.md)
-- [DEPLOYMENT.md](DEPLOYMENT.md)
-- [DEPLOY_UPDATE.md](DEPLOY_UPDATE.md)
-
-If you use the update script added in this branch:
-
-```bash
-./update-strato.sh
-```
-
 ## Troubleshooting
 
 - If backend starts but Redis is unavailable, the app can continue with in-memory caching.
 - If article search results seem limited, verify backend is restarted after RSS search changes.
-- If Docker containers conflict during deploy, run the update script or clean old containers before restart.
+- If local services conflict, stop old processes and restart backend/frontend terminals.
 
 ## Additional documentation
 
