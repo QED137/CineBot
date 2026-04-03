@@ -671,7 +671,7 @@ def handle_graph_search(user_query: str, chat_history: List[Dict]) -> Tuple[str,
             graph=kg,
             verbose=True,
             cypher_prompt=cypher_prompt,
-            allow_dangerous_requests=True,
+            allow_dangerous_requests=False,
             return_intermediate_steps=True
         )
         result = cypher_chain.invoke({"query": user_query})

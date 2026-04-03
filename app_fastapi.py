@@ -5,6 +5,10 @@ import random
 import logging
 import html
 import json
+import time
+import asyncio
+from collections import defaultdict, deque
+from threading import Lock
 from typing import Optional, List, Dict, Any
 
 from fastapi import FastAPI, Request, UploadFile, File, Form, HTTPException
@@ -27,7 +31,12 @@ load_dotenv()
 app = FastAPI(title="CineBot API", version="2.0.0")
 
 # Secret key for signing sessions
-SECRET_KEY = os.getenv("FLASK_SECRET_KEY", "INSECURE-DEV-SECRET")
+SECRET_KEY = os.getenv("FLASK_SECRET_KEY")
+if not SECRET_KEY:
+    if os.getenv("FLASK_ENV", "").lower() == "production":
+        raise RuntimeError("FLASK_SECRET_KEY must be set in production.")
+    SECRET_KEY = os.urandom(32).hex()
+    logger.warning("FLASK_SECRET_KEY is missing. Using an ephemeral dev secret key.")
 
 # Session middleware
 app.add_middleware(SessionMiddleware, secret_key=SECRET_KEY)
@@ -43,6 +52,119 @@ app.add_middleware(
 
 # Templates directory
 templates = Jinja2Templates(directory="templates")
+
+
+def _get_int_env(name: str, default: int) -> int:
+    raw = os.getenv(name)
+    if raw is None:
+        return default
+    try:
+        return int(raw)
+    except ValueError:
+        logger.warning("Invalid integer for %s=%s, using default=%s", name, raw, default)
+        return default
+
+
+def _get_float_env(name: str, default: float) -> float:
+    raw = os.getenv(name)
+    if raw is None:
+        return default
+    try:
+        return float(raw)
+    except ValueError:
+        logger.warning("Invalid float for %s=%s, using default=%s", name, raw, default)
+        return default
+
+
+MAX_QUERY_CHARS = _get_int_env("MAX_QUERY_CHARS", 500)
+SESSION_REQUEST_LIMIT = _get_int_env("SESSION_REQUEST_LIMIT", 10)
+SESSION_WINDOW_SECONDS = _get_int_env("SESSION_WINDOW_SECONDS", 300)
+SESSION_COST_BUDGET = _get_int_env("SESSION_COST_BUDGET", 30)
+SESSION_COST_WINDOW_SECONDS = _get_int_env("SESSION_COST_WINDOW_SECONDS", 3600)
+SESSION_MIN_INTERVAL_SECONDS = _get_float_env("SESSION_MIN_INTERVAL_SECONDS", 0.75)
+TEXT_REQUEST_COST = _get_int_env("TEXT_REQUEST_COST", 3)
+IMAGE_REQUEST_COST = _get_int_env("IMAGE_REQUEST_COST", 8)
+GLOBAL_CHAT_CONCURRENCY = _get_int_env("GLOBAL_CHAT_CONCURRENCY", 30)
+
+CHAT_RATE_LIMIT = _get_int_env("CHAT_RATE_LIMIT", 20)
+CHAT_RATE_WINDOW_SECONDS = _get_int_env("CHAT_RATE_WINDOW_SECONDS", 60)
+CHAT_BURST_LIMIT = _get_int_env("CHAT_BURST_LIMIT", 4)
+CHAT_BURST_WINDOW_SECONDS = _get_int_env("CHAT_BURST_WINDOW_SECONDS", 10)
+SUGGESTION_RATE_LIMIT = _get_int_env("SUGGESTION_RATE_LIMIT", 60)
+SUGGESTION_RATE_WINDOW_SECONDS = _get_int_env("SUGGESTION_RATE_WINDOW_SECONDS", 60)
+FEEDBACK_RATE_LIMIT = _get_int_env("FEEDBACK_RATE_LIMIT", 30)
+FEEDBACK_RATE_WINDOW_SECONDS = _get_int_env("FEEDBACK_RATE_WINDOW_SECONDS", 60)
+
+chat_concurrency_guard = asyncio.Semaphore(max(1, GLOBAL_CHAT_CONCURRENCY))
+_ip_window_events = defaultdict(deque)
+_ip_window_lock = Lock()
+
+
+def _client_ip(request: Request) -> str:
+    forwarded_for = request.headers.get("x-forwarded-for", "")
+    if forwarded_for:
+        return forwarded_for.split(",")[0].strip()
+    return request.client.host if request.client else "unknown"
+
+
+def _enforce_ip_limit(request: Request, scope: str, limit: int, window_seconds: int):
+    now = time.time()
+    ip = _client_ip(request)
+    key = f"{scope}:{ip}:{window_seconds}"
+    with _ip_window_lock:
+        events = _ip_window_events[key]
+        while events and now - events[0] > window_seconds:
+            events.popleft()
+        if len(events) >= limit:
+            raise HTTPException(status_code=429, detail=f"Rate limit exceeded for {scope}.")
+        events.append(now)
+
+
+def _enforce_session_limits(request: Request, is_image: bool):
+    now = time.time()
+    guard = request.session.get("abuse_guard", {})
+
+    last_ts = float(guard.get("last_ts", 0))
+    if now - last_ts < SESSION_MIN_INTERVAL_SECONDS:
+        raise HTTPException(status_code=429, detail="Please slow down and try again.")
+
+    request_ts = [
+        float(ts)
+        for ts in guard.get("request_ts", [])
+        if now - float(ts) <= SESSION_WINDOW_SECONDS
+    ]
+    if len(request_ts) >= SESSION_REQUEST_LIMIT:
+        raise HTTPException(status_code=429, detail="Session request limit reached. Please wait.")
+
+    cost_events = [
+        {"ts": float(evt.get("ts", 0)), "cost": int(evt.get("cost", 0))}
+        for evt in guard.get("cost_events", [])
+        if now - float(evt.get("ts", 0)) <= SESSION_COST_WINDOW_SECONDS
+    ]
+
+    used_budget = sum(evt["cost"] for evt in cost_events)
+    incoming_cost = IMAGE_REQUEST_COST if is_image else TEXT_REQUEST_COST
+    if used_budget + incoming_cost > SESSION_COST_BUDGET:
+        raise HTTPException(status_code=429, detail="Session processing budget exceeded. Please wait.")
+
+    request_ts.append(now)
+    cost_events.append({"ts": now, "cost": incoming_cost})
+    request.session["abuse_guard"] = {
+        "last_ts": now,
+        "request_ts": request_ts,
+        "cost_events": cost_events,
+    }
+
+
+@app.middleware("http")
+async def add_security_headers(request: Request, call_next):
+    response = await call_next(request)
+    response.headers.setdefault("X-Content-Type-Options", "nosniff")
+    response.headers.setdefault("X-Frame-Options", "DENY")
+    response.headers.setdefault("Referrer-Policy", "strict-origin-when-cross-origin")
+    response.headers.setdefault("Permissions-Policy", "camera=(), microphone=(), geolocation=()")
+    response.headers.setdefault("Cache-Control", "no-store")
+    return response
 
 
 # --- Pydantic Models ---
@@ -223,14 +345,16 @@ def render_movie_card_html(rec, index):
 
 
 @app.get("/api/suggestion")
-async def get_suggestion():
+async def get_suggestion(request: Request):
     """Return a random suggestion prompt"""
+    _enforce_ip_limit(request, "suggestion", SUGGESTION_RATE_LIMIT, SUGGESTION_RATE_WINDOW_SECONDS)
     return JSONResponse({"suggestion": random.choice(SUGGESTION_PROMPTS)})
 
 
 @app.post("/api/feedback")
-async def handle_feedback(feedback_data: FeedbackRequest):
+async def handle_feedback(request: Request, feedback_data: FeedbackRequest):
     """Handle user feedback"""
+    _enforce_ip_limit(request, "feedback", FEEDBACK_RATE_LIMIT, FEEDBACK_RATE_WINDOW_SECONDS)
     logger.info(f"FEEDBACK RECEIVED: {feedback_data.dict()}")
     return JSONResponse({"status": "success"})
 
@@ -390,6 +514,13 @@ async def handle_chat(
     
     This endpoint accepts both JSON and form data
     """
+    _enforce_ip_limit(request, "chat", CHAT_RATE_LIMIT, CHAT_RATE_WINDOW_SECONDS)
+    _enforce_ip_limit(request, "chat-burst", CHAT_BURST_LIMIT, CHAT_BURST_WINDOW_SECONDS)
+
+    if chat_concurrency_guard.locked():
+        raise HTTPException(status_code=429, detail="Server is busy. Please retry shortly.")
+
+    await chat_concurrency_guard.acquire()
     try:
         MAX_TURNS = 6  # how many last messages to keep in server-side history
 
@@ -432,12 +563,16 @@ async def handle_chat(
 
         # Basic validation: require either text or image
         if user_query:
+            if len(user_query) > MAX_QUERY_CHARS:
+                raise HTTPException(status_code=400, detail=f"Query too long. Max {MAX_QUERY_CHARS} characters.")
             history.append({"role": "user", "content": user_query})
         elif image_bytes:
             history.append({"role": "user", "content": "(Uploaded a poster)"})
         else:
             logger.error("No query or image provided in request")
             raise HTTPException(status_code=400, detail="No query or image provided.")
+
+        _enforce_session_limits(request, is_image=bool(image_bytes))
 
         logger.info(f"Processing query: {user_query[:50] if user_query else 'poster upload'}")
         
@@ -479,11 +614,6 @@ async def handle_chat(
         request.session["chat_history"] = session_history
         # -----------------------------------------------------------------------
 
-        # Logging (optional, for debugging)
-        print("chat_history (trimmed) stored in session:")
-        for msg in session_history:
-            print(f"{msg['role']}: {msg['content'][:60]}")
-
         # Return clean response schema
         return JSONResponse(
             {
@@ -510,6 +640,8 @@ async def handle_chat(
             status_code=500,
             detail=f"An internal error occurred: {str(e)}"
         )
+    finally:
+        chat_concurrency_guard.release()
 
 
 @app.get("/api/graph-data")
