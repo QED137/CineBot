@@ -1,6 +1,8 @@
 # Optimized for Low-Memory Servers (4GB RAM)
 # Use this for Strato VPS with 2 CPU, 4GB RAM
 
+version: '3.8'
+
 services:
   # Neo4j Graph Database (Memory Optimized)
   # OPTIONAL: Skip this if using Neo4j Aura cloud
@@ -8,9 +10,11 @@ services:
   neo4j:
     image: neo4j:5.15-community
     container_name: cinebot-neo4j
-    # No external ports - internal docker network only
+    ports:
+      - "7474:7474"  # HTTP
+      - "7687:7687"  # Bolt
     environment:
-      - NEO4J_AUTH=neo4j/${NEO4J_PASSWORD}
+      - NEO4J_AUTH=neo4j/cinebot123
       - NEO4J_PLUGINS=["apoc"]
       - NEO4J_apoc_export_file_enabled=true
       - NEO4J_apoc_import_file_enabled=true
@@ -34,7 +38,7 @@ services:
         reservations:
           memory: 1G
     healthcheck:
-      test: ["CMD-SHELL", "cypher-shell -u neo4j -p ${NEO4J_PASSWORD} 'RETURN 1'"]
+      test: ["CMD-SHELL", "cypher-shell -u neo4j -p cinebot123 'RETURN 1'"]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -45,10 +49,11 @@ services:
   redis:
     image: redis:7-alpine
     container_name: cinebot-redis
-    # No external ports - internal docker network only
+    ports:
+      - "6379:6379"
     volumes:
       - redis_data:/data
-    command: redis-server --appendonly yes --maxmemory 256mb --maxmemory-policy allkeys-lru --requirepass ${REDIS_PASSWORD}
+    command: redis-server --appendonly yes --maxmemory 256mb --maxmemory-policy allkeys-lru
     deploy:
       resources:
         limits:
@@ -56,7 +61,7 @@ services:
         reservations:
           memory: 128M
     healthcheck:
-      test: ["CMD", "redis-cli", "-a", "${REDIS_PASSWORD}", "ping"]
+      test: ["CMD", "redis-cli", "ping"]
       interval: 10s
       timeout: 3s
       retries: 3
@@ -68,26 +73,23 @@ services:
       context: .
       dockerfile: Dockerfile
     container_name: cinebot-backend
-    # No external port - reached via frontend Nginx proxy
+    ports:
+      - "8000:8000"
     environment:
       # Neo4j (from .env - can be Aura cloud or local)
-      - NEO4J_URI=${NEO4J_URI:-bolt://neo4j:7687}
-      - NEO4J_USERNAME=${NEO4J_USERNAME:-neo4j}
+      - NEO4J_URI=${NEO4J_URI}
+      - NEO4J_USERNAME=${NEO4J_USERNAME}
       - NEO4J_PASSWORD=${NEO4J_PASSWORD}
       - NEO4J_DATABASE=${NEO4J_DATABASE:-neo4j}
       # Redis
       - REDIS_HOST=redis
       - REDIS_PORT=6379
-      - REDIS_PASSWORD=${REDIS_PASSWORD}
       # API Keys (from .env file)
       - OPENAI_API_KEY=${OPENAI_API_KEY}
       - TMDB_API_KEY=${TMDB_API_KEY}
       - OMDB_API_KEY=${OMDB_API_KEY:-}
       - HF_TOKEN=${HF_TOKEN}
-      - FLASK_SECRET_KEY=${FLASK_SECRET_KEY}
     depends_on:
-      neo4j:
-        condition: service_healthy
       redis:
         condition: service_healthy
     deploy:
@@ -97,6 +99,8 @@ services:
         reservations:
           memory: 512M
     restart: unless-stopped
+    volumes:
+      - ./:/app
     healthcheck:
       test: ["CMD", "python3", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/api/health')"]
       interval: 30s
@@ -111,9 +115,7 @@ services:
       dockerfile: Dockerfile.frontend
     container_name: cinebot-frontend
     ports:
-    #in production chenage keep 80:80. 8080:80 is for devs
-      #- "8080:80" #for deves 
-      - 3000:80  
+      - "3000:80"
     depends_on:
       - backend
     deploy:
