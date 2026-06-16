@@ -371,7 +371,7 @@ class MovieDatabaseImporter:
                                 self.logger.warning(f"Skipping movie ID {movie_id} as no data was fetched.")
                                 continue
 
-                            session.write_transaction(
+                            session.execute_write(
                                 self._create_movie_transaction,
                                 movie_data
                             )

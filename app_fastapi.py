@@ -599,16 +599,18 @@ async def handle_chat(
         }
         history.append(bot_message)
 
-        # --- Trim and store history in server-side session (with context for last message) ---
+        # --- Trim and store history in server-side session ---
         session_history = []
         for i, msg in enumerate(history[-MAX_TURNS:]):
             stored_msg = {
                 "role": msg.get("role"),
                 "content": (msg.get("content") or "")[:500],
             }
-            # Store full context only for the last assistant message (for follow-ups)
-            if msg.get("role") == "assistant" and i == len(history[-MAX_TURNS:]) - 1:
-                stored_msg["context"] = msg.get("context", [])
+            # Do NOT store full assistant `context` in the cookie-backed session.
+            # Storing large `context` objects in the session causes oversized
+            # Set-Cookie headers and upstream errors (Nginx: "upstream sent too big header").
+            # If follow-up context is needed, store only lightweight identifiers
+            # or use a server-side session store (Redis) instead.
             session_history.append(stored_msg)
 
         request.session["chat_history"] = session_history
