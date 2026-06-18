@@ -14,7 +14,7 @@ services:
       - "7474:7474"  # HTTP
       - "7687:7687"  # Bolt
     environment:
-      - NEO4J_AUTH=neo4j/${NEO4J_PASSWORD}
+      - NEO4J_AUTH=${NEO4J_PASSWORD}
       - NEO4J_PLUGINS=["apoc"]
       - NEO4J_apoc_export_file_enabled=true
       - NEO4J_apoc_import_file_enabled=true
@@ -38,7 +38,7 @@ services:
         reservations:
           memory: 1G
     healthcheck:
-      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:7474"]
+      test: ["CMD-SHELL", "cypher-shell -u neo4j -p cinebot123 'RETURN 1'"]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -90,8 +90,6 @@ services:
       - OMDB_API_KEY=${OMDB_API_KEY:-}
       - HF_TOKEN=${HF_TOKEN}
     depends_on:
-      neo4j:
-        condition: service_healthy
       redis:
         condition: service_healthy
     deploy:
