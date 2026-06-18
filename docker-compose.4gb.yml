@@ -90,6 +90,8 @@ services:
       - OMDB_API_KEY=${OMDB_API_KEY:-}
       - HF_TOKEN=${HF_TOKEN}
     depends_on:
+      neo4j:
+        condition: service_healthy
       redis:
         condition: service_healthy
     deploy:
@@ -106,7 +108,7 @@ services:
       interval: 30s
       timeout: 10s
       retries: 3
-      start_period: 40s
+      start_period: 120s
 
   # React Frontend (Nginx)
   frontend:
@@ -117,7 +119,8 @@ services:
     ports:
       - "3000:80"
     depends_on:
-      - backend
+      backend:
+        condition: service_healthy
     deploy:
       resources:
         limits:

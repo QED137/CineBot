@@ -54,6 +54,19 @@ app.add_middleware(
 templates = Jinja2Templates(directory="templates")
 
 
+# Startup event to pre-load CLIP model
+@app.on_event("startup")
+async def startup_event():
+    """Pre-load CLIP model on startup to avoid first-request timeout."""
+    try:
+        from core.core_rag import ensure_clip_loaded
+        logger.info("Pre-loading CLIP model on startup...")
+        ensure_clip_loaded()
+        logger.info("CLIP model pre-loaded successfully.")
+    except Exception as e:
+        logger.warning(f"Failed to pre-load CLIP model on startup: {e}")
+
+
 def _get_int_env(name: str, default: int) -> int:
     raw = os.getenv(name)
     if raw is None:
