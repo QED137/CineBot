@@ -1,3 +1,144 @@
+# # Optimized for Low-Memory Servers (4GB RAM)
+# # Use this for Strato VPS with 2 CPU, 4GB RAM
+
+# version: '3.8'
+
+# services:
+#   # Neo4j Graph Database (Memory Optimized)
+#   # OPTIONAL: Skip this if using Neo4j Aura cloud
+#   # To skip: docker compose -f docker-compose.4gb.yml up -d redis backend frontend
+#   neo4j:
+#     image: neo4j:5.15-community
+#     container_name: cinebot-neo4j
+#     ports:
+#       - "7474:7474"  # HTTP
+#       - "7687:7687"  # Bolt
+#     environment:
+#       - NEO4J_AUTH=neo4j/${NEO4J_PASSWORD}
+#       - NEO4J_PLUGINS=["apoc"]
+#       - NEO4J_apoc_export_file_enabled=true
+#       - NEO4J_apoc_import_file_enabled=true
+#       - NEO4J_apoc_import_file_use__neo4j__config=true
+#       - NEO4J_dbms_security_procedures_unrestricted=apoc.*
+#       # OPTIMIZED MEMORY SETTINGS FOR 4GB SERVER
+#       - NEO4J_dbms_memory_heap_initial__size=512M
+#       - NEO4J_dbms_memory_heap_max__size=1536M  # 1.5GB max
+#       - NEO4J_dbms_memory_pagecache_size=512M
+#       # Performance tuning for low memory
+#       - NEO4J_dbms_tx__state_memory__allocation=ON_HEAP
+#     volumes:
+#       - neo4j_data:/data
+#       - neo4j_logs:/logs
+#       - neo4j_import:/var/lib/neo4j/import
+#       - neo4j_plugins:/plugins
+#     deploy:
+#       resources:
+#         limits:
+#           memory: 2G  # Hard limit
+#         reservations:
+#           memory: 1G
+#     healthcheck:
+#       test: ["CMD-SHELL", "cypher-shell -u neo4j -p cinebot123 'RETURN 1'"]
+#       interval: 10s
+#       timeout: 5s
+#       retries: 5
+#       start_period: 30s
+#     restart: unless-stopped
+
+#   # Redis Cache (Memory Optimized)
+#   redis:
+#     image: redis:7-alpine
+#     container_name: cinebot-redis
+#     ports:
+#       - "6379:6379"
+#     volumes:
+#       - redis_data:/data
+#     command: redis-server --appendonly yes --maxmemory 256mb --maxmemory-policy allkeys-lru
+#     deploy:
+#       resources:
+#         limits:
+#           memory: 512M
+#         reservations:
+#           memory: 128M
+#     healthcheck:
+#       test: ["CMD", "redis-cli", "ping"]
+#       interval: 10s
+#       timeout: 3s
+#       retries: 3
+#     restart: unless-stopped
+
+#   # FastAPI Backend
+#   backend:
+#     build:
+#       context: .
+#       dockerfile: Dockerfile
+#     container_name: cinebot-backend
+#     ports:
+#       - "8000:8000"
+#     environment:
+#       # Neo4j (from .env - can be Aura cloud or local)
+#       - NEO4J_URI=${NEO4J_URI}
+#       - NEO4J_USERNAME=${NEO4J_USERNAME}
+#       - NEO4J_PASSWORD=${NEO4J_PASSWORD}
+#       - NEO4J_DATABASE=${NEO4J_DATABASE:-neo4j}
+#       # Redis
+#       - REDIS_HOST=redis
+#       - REDIS_PORT=6379
+#       # API Keys (from .env file)
+#       - OPENAI_API_KEY=${OPENAI_API_KEY}
+#       - TMDB_API_KEY=${TMDB_API_KEY}
+#       - OMDB_API_KEY=${OMDB_API_KEY:-}
+#       - HF_TOKEN=${HF_TOKEN}
+#     depends_on:
+#       redis:
+#         condition: service_healthy
+#     deploy:
+#       resources:
+#         limits:
+#           memory: 768M
+#         reservations:
+#           memory: 512M
+#     restart: unless-stopped
+#     volumes:
+#       - ./:/app
+#     healthcheck:
+#       test: ["CMD", "python3", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/api/health')"]
+#       interval: 30s
+#       timeout: 10s
+#       retries: 3
+#       start_period: 120s
+
+#   # React Frontend (Nginx)
+#   frontend:
+#     build:
+#       context: .
+#       dockerfile: Dockerfile.frontend
+#     container_name: cinebot-frontend
+#     ports:
+#       - "3000:80"
+#     depends_on:
+#       - backend
+#     deploy:
+#       resources:
+#         limits:
+#           memory: 256M
+#         reservations:
+#           memory: 128M
+#     restart: unless-stopped
+
+# volumes:
+#   neo4j_data:
+#     driver: local
+#   neo4j_logs:
+#     driver: local
+#   neo4j_import:
+#     driver: local
+#   neo4j_plugins:
+#     driver: local
+#   redis_data:
+#     driver: local
+
+
 # Optimized for Low-Memory Servers (4GB RAM)
 # Use this for Strato VPS with 2 CPU, 4GB RAM
 
@@ -14,7 +155,7 @@ services:
       - "7474:7474"  # HTTP
       - "7687:7687"  # Bolt
     environment:
-      - NEO4J_AUTH=neo4j/${NEO4J_PASSWORD}
+      - NEO4J_AUTH=neo4j/cinebot123
       - NEO4J_PLUGINS=["apoc"]
       - NEO4J_apoc_export_file_enabled=true
       - NEO4J_apoc_import_file_enabled=true
@@ -106,7 +247,7 @@ services:
       interval: 30s
       timeout: 10s
       retries: 3
-      start_period: 120s
+      start_period: 40s
 
   # React Frontend (Nginx)
   frontend:
@@ -137,3 +278,6 @@ volumes:
     driver: local
   redis_data:
     driver: local
+    
+
+
