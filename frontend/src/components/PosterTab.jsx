@@ -40,9 +40,9 @@ export default function PosterTab() {
 
     try {
       const data = await chatAPI.sendPosterImage(selectedFile);
-      
-      setMessage(data.llm_response_text || '');
-      setMovies(data.context_movies || []);
+
+      setMessage(data.message || '');
+      setMovies(data.movies || []);
       
     } catch (err) {
       console.error('Error uploading poster:', err);

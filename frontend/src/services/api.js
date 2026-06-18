@@ -7,6 +7,7 @@ const api = axios.create({
   headers: {
     'Content-Type': 'application/json',
   },
+  timeout: 120000, // 120 seconds for CLIP model loading
 });
 
 export const chatAPI = {
